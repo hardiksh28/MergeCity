@@ -11,7 +11,7 @@ export function Founder({ compact }: { compact?: boolean }) {
   if (compact) {
     return (
       <a
-        href={f.github}
+        href={f.website}
         target="_blank"
         rel="noopener noreferrer"
         className="group inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-black/45 py-1.5 pl-1.5 pr-3.5 backdrop-blur transition hover:border-white/25"
@@ -36,6 +36,9 @@ export function Founder({ compact }: { compact?: boolean }) {
           {f.tagline} No team, no investors: every email to this address is read and answered by me.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
+          <a href={f.website} target="_blank" rel="noopener noreferrer" className="chip !no-underline hover:!text-ink">
+            hardiksharma.in ↗
+          </a>
           <a href={f.github} target="_blank" rel="noopener noreferrer" className="chip !no-underline hover:!text-ink">
             GitHub ↗
           </a>

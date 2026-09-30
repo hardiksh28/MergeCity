@@ -13,6 +13,7 @@ export const SITE = {
     name: "Hardik Sharma",
     role: "Founder, MergeMate",
     tagline: "Solopreneur and indie hacker, building MergeMate in public.",
+    website: "https://hardiksharma.in",
     github: "https://github.com/hardiksh28",
   },
   updated: "30 September 2026",
