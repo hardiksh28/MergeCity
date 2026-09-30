@@ -4,6 +4,8 @@ import { FOUNDER_PRICE, FOUNDER_PRICE_INR, SEAT_PRICE } from "./pricing";
 export const SITE = {
   brand: "MergeMate",
   product: "MergeCity",
+  // What MergeMate does, in one line. Shown under the headline and in link previews.
+  pitch: "MergeMate finds open source issues that match your skills and walks you through the fix, so you ship real PRs and actually understand them.",
   url: "https://merge-city.vercel.app",
   operator: "Hardik Sharma",
   location: "India",

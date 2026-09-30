@@ -9,6 +9,7 @@ import { BackButton } from "./BackButton";
 import { FOUNDER_PRICE, money } from "@/lib/backend";
 import { LegalFooter } from "@/components/legal/LegalPage";
 import { Founder } from "@/components/legal/Founder";
+import { SITE } from "@/lib/site";
 
 const SHOW_COUNT_FROM = 25;
 
@@ -82,10 +83,13 @@ export function Landing() {
               </>
             )}
           </h1>
-          <p className="rise mt-4 max-w-[520px] text-[15px] leading-relaxed text-muted sm:text-lg" style={{ animationDelay: "0.18s" }}>
+          <p className="rise mt-4 max-w-[560px] text-base font-medium leading-snug text-ink sm:text-xl" style={{ animationDelay: "0.14s" }}>
+            {SITE.pitch}
+          </p>
+          <p className="rise mt-3 max-w-[520px] text-[14px] leading-relaxed text-muted sm:text-base" style={{ animationDelay: "0.18s" }}>
             {me
               ? `${plotLabel(PLOTS_BY_ID.get(me.plotId)!)} · #${me.place} on the waitlist · ${me.floors} floor${me.floors > 1 ? "s" : ""}.`
-              : "Join the MergeMate waitlist and a plot of land in MergeCity is registered in your name. Build your character, get your house, invite teammates to stack floors."}
+              : "Join the waitlist and a plot in MergeCity is registered in your name. Invite teammates to stack floors on your house."}
           </p>
           <div className="rise mt-6 flex flex-wrap items-center gap-3" style={{ animationDelay: "0.26s" }}>
             {me ? (

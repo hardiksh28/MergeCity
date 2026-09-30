@@ -6,10 +6,11 @@ const orbitron = Orbitron({ variable: "--font-orbitron", subsets: ["latin"], wei
 const grotesk = Space_Grotesk({ variable: "--font-grotesk", subsets: ["latin"] });
 const mono = JetBrains_Mono({ variable: "--font-jbmono", subsets: ["latin"] });
 
+import { SITE } from "@/lib/site";
+
 export const metadata: Metadata = {
   title: "MergeCity: claim your plot on the MergeMate waitlist",
-  description:
-    "Join the MergeMate waitlist and move into MergeCity: a 3D neon city where every resident gets a character and a house. Invite teammates to stack floors.",
+  description: `${SITE.pitch} Join the waitlist and claim your plot in MergeCity.`,
 };
 
 export const viewport: Viewport = {
