@@ -34,16 +34,16 @@ export default function Terms() {
       <h2>4. Paid upgrades</h2>
       <ul>
         <li>
-          <strong>Founding resident, {SITE.founderPrice} USD, one-time.</strong> Moves your house to Main Street with its lights on and a flag. It is credited as {SITE.founderPrice} off your first {SITE.brand} bill and is refundable on request before launch.
+          <strong>Founding resident, one-time: {SITE.founderPriceInr} by UPI in India, or {SITE.founderPrice} USD by PayPal elsewhere.</strong> Moves your house to Main Street with its lights on and a flag. It is credited as {SITE.founderPrice} off your first {SITE.brand} bill and is refundable on request before launch.
         </li>
         <li>
-          <strong>Team tower, {SITE.seatPrice} USD per seat per month.</strong> Puts your team&apos;s name on a downtown tower, with one lit floor per paid seat. It renews monthly until cancelled.
+          <strong>Team tower.</strong> Puts your team&apos;s name on a downtown tower, with one lit floor per paid seat. During early access towers are arranged by email; the price and billing period are agreed with you in writing before you pay.
         </li>
         <li>
-          Payments are processed by <strong>Dodo Payments</strong>, which acts as the merchant of record and handles applicable taxes. Prices are in US dollars. Your bank may show a local-currency amount.
+          You pay {SITE.operator} directly: by <strong>UPI</strong> (India) or <strong>PayPal</strong> (everywhere else). After paying you enter your UPI reference number or PayPal transaction ID in {SITE.product}. PayPal may charge you currency conversion if your account is not in US dollars.
         </li>
         <li>
-          An upgrade is applied only after the payment provider confirms the payment. Refunds and cancellations follow our <Link href="/refunds">Refund & Cancellation Policy</Link>.
+          We check every payment by hand and apply the upgrade once we have matched it, usually within 24 hours. Submitting a false or someone else&apos;s transaction ID is not allowed and gets the claim rejected. Refunds and cancellations follow our <Link href="/refunds">Refund & Cancellation Policy</Link>.
         </li>
       </ul>
 

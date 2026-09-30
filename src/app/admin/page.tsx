@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { backend } from "@/lib/backend";
+import { backend, money, rupees } from "@/lib/backend";
+import { registryNo } from "@/components/ui/Deed";
 import { PLOTS_BY_ID, plotLabel } from "@/lib/city";
 import { isBlockedName } from "@/lib/moderation";
 import { Avatar } from "@/components/ui/Avatar";
@@ -33,7 +34,10 @@ export default function Admin() {
 
   if (!data) return null;
   const day = data.residents.filter((r) => now - r.joinedAt < 864e5).length;
-  const revenue = data.payments.reduce((a, p) => a + p.amount, 0);
+  const inr = data.payments.filter((p) => p.currency === "INR").reduce((a, p) => a + p.amount, 0);
+  const usd = data.payments.filter((p) => p.currency === "USD").reduce((a, p) => a + p.amount, 0);
+  const pending = data.claims.filter((c) => c.status === "pending");
+  const byId = new Map(data.residents.map((r) => [r.id, r]));
 
   const exportCsv = () => {
     const head = "email,handle,github,tier,floors,plot,place,referrals,joined_at\n";
@@ -69,13 +73,48 @@ export default function Admin() {
             ["Last 24h", day],
             ["Referrals", data.referrals.length],
             ["Payments", data.payments.length],
-            ["Revenue", `$${revenue.toLocaleString("en-US")}`],
+            ["Revenue", `${rupees(inr)} + ${money(usd)}`],
           ].map(([k, v]) => (
             <div key={k} className="glass rounded-2xl p-4">
               <div className="label">{k}</div>
               <div className="mt-1 font-display text-2xl font-black">{v}</div>
             </div>
           ))}
+        </section>
+
+        <section className="glass mt-6 rounded-2xl p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-display text-lg font-bold">Payments to check {pending.length > 0 && <span className="chip ml-2 !py-0.5 !text-amber">{pending.length}</span>}</h2>
+            <span className="text-xs text-dim">Match the ID and amount against your bank / PayPal, then approve.</span>
+          </div>
+          {pending.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">Nothing waiting.</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-line/60 rounded-xl border border-line">
+              {pending.map((c) => {
+                const r = byId.get(c.userId);
+                return (
+                  <li key={c.id} className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm">
+                    <span className="chip !py-0.5">{c.method === "upi" ? "UPI" : "PayPal"}</span>
+                    <b>{c.currency === "INR" ? rupees(c.amount) : money(c.amount)}</b>
+                    <code className="font-mono text-cyan">{c.txnId}</code>
+                    <span className="text-muted">
+                      {r ? `${r.handle} · ${r.email} · ${registryNo(r.place)}` : "deleted resident"}
+                    </span>
+                    <span className="text-xs text-dim">{new Date(c.at).toLocaleString("en-IN")}</span>
+                    <span className="ml-auto flex gap-2">
+                      <button className="chip !py-1 !text-lime hover:!border-lime" onClick={() => { try { backend.admin.approve(c.id); } catch (e) { alert((e as Error).message); } }}>
+                        Approve
+                      </button>
+                      <button className="chip !py-1 hover:!text-red" onClick={() => confirm(`Reject ${c.txnId}? The buyer sees "we couldn't find this payment".`) && backend.admin.reject(c.id)}>
+                        Reject
+                      </button>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </section>
 
         <section className="glass mt-6 rounded-2xl">

@@ -53,11 +53,28 @@ create table public.payments (
   user_id     uuid not null references public.residents(user_id),
   amount      numeric(10,2) not null,
   currency    text not null default 'USD',
-  gateway_id  text not null unique,           -- Dodo payment/subscription id; idempotency for webhook retries
+  gateway_id  text not null unique,           -- 'upi:<UTR>' / 'paypal:<txn id>'; stops double grants
   status      text not null,
   type        text not null check (type in ('founder','subscription')),
   created_at  timestamptz not null default now()
 );
+
+-- "I paid, here's my transaction ID." Checked by hand, then approved or rejected.
+create table public.payment_claims (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references public.residents(user_id) on delete cascade,
+  method      text not null check (method in ('upi','paypal')),
+  txn_id      text not null,
+  amount      numeric(10,2) not null,
+  currency    text not null check (currency in ('INR','USD')),
+  status      text not null default 'pending' check (status in ('pending','approved','rejected')),
+  created_at  timestamptz not null default now(),
+  reviewed_at timestamptz
+);
+-- The same transaction ID can't be claimed twice (unless an earlier claim was rejected).
+create unique index payment_claims_txn on public.payment_claims (txn_id) where status <> 'rejected';
+-- One claim waiting per person.
+create unique index payment_claims_one_pending on public.payment_claims (user_id) where status = 'pending';
 
 create table public.teams (
   id          uuid primary key default gen_random_uuid(),
@@ -80,7 +97,7 @@ grant select (id, name, tower_id, seats) on public.teams to anon, authenticated;
 -- Explicit grants, so this works with "Automatically expose new tables" turned OFF.
 -- RLS policies below still decide which rows each role can see.
 grant select on public.residents, public.plots to anon, authenticated;
-grant select on public.resident_private, public.payments to authenticated;
+grant select on public.resident_private, public.payments, public.payment_claims to authenticated;
 grant all on all tables in schema public to service_role;
 
 alter table public.residents enable row level security;
@@ -89,10 +106,12 @@ alter table public.referrals enable row level security;
 alter table public.payments  enable row level security;
 alter table public.teams     enable row level security;
 alter table public.plots     enable row level security;
+alter table public.payment_claims enable row level security;
 
 create policy "city can see residents" on public.residents for select using (not hidden);
 create policy "own private row" on public.resident_private for select using (auth.uid() = user_id);
 create policy "own payments" on public.payments for select using (auth.uid() = user_id);
+create policy "own claims" on public.payment_claims for select using (auth.uid() = user_id);
 create policy "teams public" on public.teams for select using (true);
 create policy "plots public" on public.plots for select using (true);
 -- No insert/update policies: all writes go through the security-definer functions below.
@@ -174,6 +193,53 @@ create or replace function public.release_tower(p_gateway_id text)
 returns void language sql security definer set search_path = public as $$
   delete from teams where gateway_id = p_gateway_id;
 $$;
+
+-- ------------------------------------------------------ manual payments
+-- The buyer submits their UPI reference / PayPal transaction ID. Grants nothing.
+create or replace function public.submit_payment_claim(p_method text, p_txn_id text)
+returns public.payment_claims
+language plpgsql security definer set search_path = public as $$
+declare
+  v_txn text := upper(regexp_replace(coalesce(p_txn_id, ''), '\s', '', 'g'));
+  v_row payment_claims;
+begin
+  if auth.uid() is null then raise exception 'Sign in first.'; end if;
+  if (select tier from residents where user_id = auth.uid()) is distinct from 'free' then
+    raise exception 'You''re already a founding resident.';
+  end if;
+  if p_method = 'upi' and v_txn !~ '^[0-9]{12}$' then raise exception 'A UPI reference (UTR) is 12 digits.'; end if;
+  if p_method = 'paypal' and v_txn !~ '^[A-Z0-9]{17}$' then raise exception 'A PayPal transaction ID is 17 letters and numbers.'; end if;
+  if p_method not in ('upi','paypal') then raise exception 'Unknown payment method.'; end if;
+
+  insert into payment_claims (user_id, method, txn_id, amount, currency)
+  values (auth.uid(), p_method, v_txn,
+          case when p_method = 'upi' then 169 else 2 end,   -- keep in sync with src/lib/pricing.ts
+          case when p_method = 'upi' then 'INR' else 'USD' end)
+  returning * into v_row;
+  return v_row;
+exception when unique_violation then
+  raise exception 'That transaction ID was already submitted, or you already have a payment waiting to be checked.';
+end $$;
+
+-- You found the money in your bank / PayPal: grant the upgrade. Admin only.
+create or replace function public.approve_payment_claim(p_claim_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare c payment_claims;
+begin
+  select * into c from payment_claims where id = p_claim_id and status = 'pending' for update;
+  if not found then return; end if;
+  perform grant_founder(c.user_id, c.method || ':' || c.txn_id, c.amount, c.currency);
+  update payment_claims set status = 'approved', reviewed_at = now() where id = c.id;
+end $$;
+
+create or replace function public.reject_payment_claim(p_claim_id uuid)
+returns void language sql security definer set search_path = public as $$
+  update payment_claims set status = 'rejected', reviewed_at = now() where id = p_claim_id and status = 'pending';
+$$;
+
+revoke all on function public.submit_payment_claim, public.approve_payment_claim, public.reject_payment_claim from public, anon, authenticated;
+grant execute on function public.submit_payment_claim to authenticated;
+grant execute on function public.approve_payment_claim, public.reject_payment_claim to service_role;
 
 -- Postgres lets PUBLIC execute new functions by default; revoking only from
 -- anon/authenticated would leave that open. Payment grants are server-only.

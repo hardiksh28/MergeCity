@@ -8,7 +8,7 @@
  * webhook, never by the browser.
  */
 
-import { CITY, MAX_FLOORS, PLOTS_BY_ID, TOWERS_BY_ID, type PlotDistrict } from "./city";
+import { CITY, MAX_FLOORS, PLOTS_BY_ID, type PlotDistrict } from "./city";
 import { hashString, mulberry32, pick } from "./rng";
 import type { Headwear, JoinInput, Look, Me, PublicResident, Team, Tier } from "./types";
 import { cleanHandle, isBlockedName, isValidEmail, isValidGithub } from "./moderation";
@@ -25,8 +25,20 @@ export const HEADWEAR: { id: Headwear; label: string }[] = [
   { id: "none", label: "Bald" },
 ];
 
-import { FOUNDER_PRICE, SEAT_PRICE } from "./pricing";
-export { FOUNDER_PRICE, SEAT_PRICE, money } from "./pricing";
+import { FOUNDER_PRICE, FOUNDER_PRICE_INR, checkTxnId, type PayMethod } from "./pricing";
+export { FOUNDER_PRICE, FOUNDER_PRICE_INR, SEAT_PRICE, money, rupees } from "./pricing";
+
+/** A buyer's "I paid, here's my transaction ID". Approved by hand in /admin. */
+export interface PaymentClaim {
+  id: string;
+  userId: string;
+  method: PayMethod;
+  txnId: string;
+  amount: number;
+  currency: "INR" | "USD";
+  status: "pending" | "approved" | "rejected";
+  at: number;
+}
 
 interface Row extends PublicResident {
   email: string;
@@ -37,10 +49,11 @@ interface Row extends PublicResident {
 }
 
 interface DB {
-  v: 4;
+  v: 5;
   residents: Row[];
   referrals: { referrerId: string; referredId: string; verifiedAt: number }[];
-  payments: { userId: string; amount: number; gatewayId: string; status: "captured"; type: "founder" | "subscription"; at: number }[];
+  payments: { userId: string; amount: number; currency: "INR" | "USD"; gatewayId: string; status: "captured"; type: "founder"; at: number }[];
+  claims: PaymentClaim[];
   teams: Team[];
   codes: Record<string, { code: string; exp: number; sent: number[] }>;
   meId: string | null;
@@ -113,7 +126,7 @@ function fakeResident(db: DB, rand: () => number, at: number, opts: { tier?: Tie
 
 function seed(): DB {
   const rand = mulberry32(9);
-  const db: DB = { v: 4, residents: [], referrals: [], payments: [], teams: [], codes: {}, meId: null, lastSeen: null, clock: now() };
+  const db: DB = { v: 5, residents: [], referrals: [], payments: [], claims: [], teams: [], codes: {}, meId: null, lastSeen: null, clock: now() };
   const start = now() - 1000 * 60 * 60 * 24 * 21;
   // A young city: a handful of houses near the centre, the rest is open land.
   const total = 34;
@@ -137,7 +150,7 @@ function load(): DB {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as DB;
-      if (parsed.v === 4) return (cache = parsed);
+      if (parsed.v === 5) return (cache = parsed);
     }
   } catch {
     /* private mode or corrupted: start fresh */
@@ -292,41 +305,40 @@ export const backend = {
     return { me: toMe(db, me), mate: toPublic(mate) };
   },
 
-  /**
-   * Demo stand-in for: Dodo checkout -> card/UPI -> webhook `payment.succeeded`
-   * -> grant_founder(). In production the browser never calls this.
-   */
-  async payFounder(): Promise<Me> {
-    await wait(1800);
+  /** The signed-in resident's latest payment claim, if any. */
+  myClaim(): PaymentClaim | null {
     const db = load();
-    const me = db.residents.find((r) => r.id === db.meId);
-    if (!me) throw new Error("Sign in first.");
-    if (me.tier === "free") {
-      const plot = nextFreePlot(db, "mainstreet");
-      if (!plot) throw new Error("Main Street is full.");
-      me.plotId = plot.id;
-      me.tier = "founder";
-      db.payments.push({ userId: me.id, amount: FOUNDER_PRICE, gatewayId: "pay_demo_" + makeId(), status: "captured", type: "founder", at: now() });
-      save();
-    }
-    return toMe(db, me);
+    return [...db.claims].reverse().find((c) => c.userId === db.meId) ?? null;
   },
 
-  async claimTower(towerId: string, name: string, seats: number): Promise<{ me: Me; team: Team }> {
-    await wait(1800);
+  /**
+   * "I've paid": records the transaction ID for a manual check. Nothing is
+   * granted here; the house moves only when an admin approves the claim.
+   */
+  async submitPayment(method: PayMethod, rawTxnId: string): Promise<PaymentClaim> {
+    await wait(600);
     const db = load();
     const me = db.residents.find((r) => r.id === db.meId);
     if (!me) throw new Error("Sign in first.");
-    if (!TOWERS_BY_ID.has(towerId)) throw new Error("Unknown tower.");
-    if (db.teams.some((t) => t.towerId === towerId)) throw new Error("That tower was just claimed.");
-    const clean = cleanHandle(name);
-    if (!clean || isBlockedName(clean)) throw new Error("Pick a different company name.");
-    const team: Team = { id: makeId(), name: clean, towerId, seats: Math.max(1, Math.min(seats, TOWERS_BY_ID.get(towerId)!.floors)), ownerId: me.id };
-    db.teams.push(team);
-    db.payments.push({ userId: me.id, amount: team.seats * SEAT_PRICE, gatewayId: "sub_demo_" + makeId(), status: "captured", type: "subscription", at: now() });
-    if (me.tier !== "founder") me.tier = "team";
+    if (me.tier !== "free") throw new Error("You're already a founding resident.");
+    const txnId = rawTxnId.trim().replace(/\s+/g, "").toUpperCase();
+    const bad = checkTxnId(method, txnId);
+    if (bad) throw new Error(bad);
+    if (db.claims.some((c) => c.txnId === txnId && c.status !== "rejected")) throw new Error("That transaction ID has already been submitted.");
+    if (db.claims.some((c) => c.userId === me.id && c.status === "pending")) throw new Error("You already have a payment waiting to be checked.");
+    const claim: PaymentClaim = {
+      id: makeId(),
+      userId: me.id,
+      method,
+      txnId,
+      amount: method === "upi" ? FOUNDER_PRICE_INR : FOUNDER_PRICE,
+      currency: method === "upi" ? "INR" : "USD",
+      status: "pending",
+      at: now(),
+    };
+    db.claims.push(claim);
     save();
-    return { me: toMe(db, me), team };
+    return claim;
   },
 
   /** Simulated realtime: a stranger moves in. */
@@ -379,7 +391,29 @@ export const backend = {
   admin: {
     all() {
       const db = load();
-      return { residents: db.residents, referrals: db.referrals, payments: db.payments, teams: db.teams };
+      return { residents: db.residents, referrals: db.referrals, payments: db.payments, claims: db.claims, teams: db.teams };
+    },
+    /** You checked your bank / PayPal and the money is there: grant the upgrade. */
+    approve(claimId: string) {
+      const db = load();
+      const c = db.claims.find((x) => x.id === claimId);
+      const r = c && db.residents.find((x) => x.id === c.userId);
+      if (!c || !r || c.status !== "pending") return;
+      if (r.tier === "free") {
+        const plot = nextFreePlot(db, "mainstreet");
+        if (!plot) throw new Error("Main Street is full.");
+        r.plotId = plot.id;
+        r.tier = "founder";
+      }
+      c.status = "approved";
+      db.payments.push({ userId: r.id, amount: c.amount, currency: c.currency, gatewayId: `${c.method}:${c.txnId}`, status: "captured", type: "founder", at: now() });
+      save();
+    },
+    reject(claimId: string) {
+      const db = load();
+      const c = db.claims.find((x) => x.id === claimId);
+      if (c && c.status === "pending") c.status = "rejected";
+      save();
     },
     remove(id: string) {
       const db = load();

@@ -34,9 +34,9 @@ Everything in the user flow runs locally with **no backend**. A demo database li
 
 ### What the $2 means
 
-A **one-time payment of $2 USD, credited as $2 off the first MergeMate bill, refundable on request before launch**. This wording appears next to every $2 button. If you pick a different meaning, change it in `src/components/ui/Panels.tsx`.
+A **one-time payment (₹169 by UPI in India, $2 by PayPal elsewhere), credited off the first MergeMate bill, refundable on request before launch**. Buyers pay, then submit their UPI reference or PayPal transaction ID; you match it and approve it in `/admin`, which moves their house. Prices live in `src/lib/pricing.ts`.
 
-`SEAT_PRICE` ($5/seat/month) in `src/lib/backend.ts` is a **placeholder**. Set the real price there.
+Team towers are requested by email for now. `SEAT_PRICE` in `src/lib/pricing.ts` is only shown as an estimate.
 
 ## How it's built
 
@@ -50,7 +50,7 @@ A **one-time payment of $2 USD, credited as $2 off the first MergeMate bill, ref
 
 ## Going live
 
-See **[docs/GO-LIVE.md](docs/GO-LIVE.md)** for the step-by-step guide: Supabase, email codes, Dodo Payments (US cards + Indian UPI, no registered business needed), the legal pages payment providers require, env vars, and a launch checklist. `npm run db:plots` generates the plots seed SQL from the city layout.
+See **[docs/GO-LIVE.md](docs/GO-LIVE.md)** for the step-by-step guide: Supabase, email codes, manual UPI + PayPal payments, the legal pages payment providers require, env vars, and a launch checklist. `npm run db:plots` generates the plots seed SQL from the city layout.
 
 ## Map of the code
 
@@ -61,6 +61,6 @@ src/lib/physics.ts         collisions + camera ray
 src/lib/store.ts           app state (zustand) + per-frame runtime
 src/components/three/*     the 3D city
 src/components/ui/*        landing, join, HUD, panels, 2D map
-src/app/api/*              Dodo Payments checkout + webhook
+src/app/api/*              Dodo Payments checkout + webhook (optional, unused for now)
 supabase/schema.sql        production schema
 ```

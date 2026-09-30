@@ -24,7 +24,7 @@ export default function Privacy() {
           <strong>Referrals:</strong> which invite link you joined with, so we can add a floor to the person who invited you.
         </li>
         <li>
-          <strong>Payments:</strong> if you pay, Dodo Payments collects your payment details directly. We receive the result (amount, date, status and a payment ID), never your full card number or UPI PIN.
+          <strong>Payments:</strong> if you pay, your UPI app or PayPal handles the payment. We keep the transaction ID you submit, the amount and the date, and we see what our bank or PayPal statement shows (usually your name and UPI ID or PayPal email). We never see your card number, bank password or UPI PIN.
         </li>
         <li>
           <strong>Technical data:</strong> basic logs (IP address, browser, timestamps) kept by our hosting provider to run the site and stop abuse.
@@ -45,7 +45,7 @@ export default function Privacy() {
         <li><strong>Vercel</strong>: hosting.</li>
         <li><strong>Supabase</strong>: database and sign-in.</li>
         <li><strong>Resend</strong>: sending emails.</li>
-        <li><strong>Dodo Payments</strong>: payments, receipts and sales tax, as our merchant of record.</li>
+        <li><strong>PayPal</strong> and our <strong>bank / UPI app</strong>: receiving payments.</li>
         <li><strong>GitHub</strong>: only if you connect your GitHub account.</li>
       </ul>
       <p>Some of these providers store data outside India, including in the United States.</p>
