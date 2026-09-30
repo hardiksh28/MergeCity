@@ -22,13 +22,13 @@ export async function rpc<T = unknown>(fn: string, args: Record<string, unknown>
 }
 
 /** Resolves the signed-in user from their Supabase access token. */
-export async function userFromToken(token: string | null): Promise<{ id: string } | null> {
+export async function userFromToken(token: string | null): Promise<{ id: string; email?: string } | null> {
   if (!token) return null;
   const res = await fetch(`${URL_}/auth/v1/user`, {
     headers: { apikey: KEY!, Authorization: `Bearer ${token}` },
     cache: "no-store",
   });
   if (!res.ok) return null;
-  const u = (await res.json()) as { id?: string };
-  return u.id ? { id: u.id } : null;
+  const u = (await res.json()) as { id?: string; email?: string };
+  return u.id ? { id: u.id, email: u.email } : null;
 }

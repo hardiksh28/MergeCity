@@ -25,8 +25,11 @@ export const HEADWEAR: { id: Headwear; label: string }[] = [
   { id: "none", label: "Bald" },
 ];
 
-export const FOUNDER_PRICE = 9;
-export const SEAT_PRICE = 499;
+// Prices in US dollars. Charged in USD worldwide; the checkout can show a
+// local-currency equivalent (e.g. INR for UPI in India).
+export const FOUNDER_PRICE = 2;
+export const SEAT_PRICE = 5; // placeholder: set your real per-seat monthly price
+export const money = (n: number) => `$${n.toLocaleString("en-US")}`;
 
 interface Row extends PublicResident {
   email: string;
@@ -293,7 +296,7 @@ export const backend = {
   },
 
   /**
-   * Demo stand-in for: Razorpay order -> UPI -> webhook `payment.captured`
+   * Demo stand-in for: Dodo checkout -> card/UPI -> webhook `payment.succeeded`
    * -> grant_founder(). In production the browser never calls this.
    */
   async payFounder(): Promise<Me> {

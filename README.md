@@ -1,6 +1,6 @@
 # MergeCity
 
-The MergeMate waitlist, as a 3D city at night. Everyone who verifies gets a registered plot of land, a character and a house. Referrals add floors. A ₹9 UPI payment moves you to Main Street with the lights on. Teams claim towers downtown.
+The MergeMate waitlist, as a 3D city at night. Everyone who verifies gets a registered plot of land, a character and a house. Referrals add floors. A $2 payment (card worldwide, UPI in India) moves you to Main Street with the lights on. Teams claim towers downtown.
 
 ```bash
 npm install
@@ -24,7 +24,7 @@ Everything in the user flow runs locally with **no backend**. A demo database li
 | Knock on doors (neighbour cards), vacant plot signs, tower cards, HQ | ✅ |
 | Your ticket: place in line, floors, GitHub garden, referral link, share | ✅ |
 | Referrals: +1 floor per verified teammate, capped at 5 | ✅ demo button simulates a teammate |
-| ₹9 upgrade → Main Street, lights on, flag | ✅ demo checkout, no money moves |
+| $2 upgrade → Main Street, lights on, flag | ✅ demo checkout, no money moves |
 | Team tower: company name, one lit floor per seat, unclaimed towers stay visible | ✅ demo |
 | Realtime "priya just moved in" toasts and houses | ✅ simulated |
 | Return visit: "3 new neighbours, you gained a floor" | ✅ |
@@ -32,11 +32,11 @@ Everything in the user flow runs locally with **no backend**. A demo database li
 | 2D clickable map fallback (no WebGL, or weak devices) | ✅ |
 | Admin: signups, referrals, payments, CSV export, remove/rename, flagged names | ✅ demo data |
 
-### What the ₹9 means
+### What the $2 means
 
-A **one-time UPI payment, credited as ₹9 off the first MergeMate bill, refundable on request before launch**. This wording appears next to every ₹9 button. If you pick a different meaning, change it in `src/components/ui/Panels.tsx`.
+A **one-time payment of $2 USD, credited as $2 off the first MergeMate bill, refundable on request before launch**. This wording appears next to every $2 button. If you pick a different meaning, change it in `src/components/ui/Panels.tsx`.
 
-`SEAT_PRICE` (₹499/seat/month) in `src/lib/backend.ts` is a **placeholder**. Set the real price there.
+`SEAT_PRICE` ($5/seat/month) in `src/lib/backend.ts` is a **placeholder**. Set the real price there.
 
 ## How it's built
 
@@ -50,7 +50,7 @@ A **one-time UPI payment, credited as ₹9 off the first MergeMate bill, refunda
 
 ## Going live
 
-See **[docs/GO-LIVE.md](docs/GO-LIVE.md)** for the step-by-step guide: Supabase, email codes, Razorpay UPI and Autopay, the legal pages Razorpay requires, env vars, and a launch checklist. `npm run db:plots` generates the plots seed SQL from the city layout.
+See **[docs/GO-LIVE.md](docs/GO-LIVE.md)** for the step-by-step guide: Supabase, email codes, Dodo Payments (US cards + Indian UPI, no registered business needed), the legal pages payment providers require, env vars, and a launch checklist. `npm run db:plots` generates the plots seed SQL from the city layout.
 
 ## Map of the code
 
@@ -61,6 +61,6 @@ src/lib/physics.ts         collisions + camera ray
 src/lib/store.ts           app state (zustand) + per-frame runtime
 src/components/three/*     the 3D city
 src/components/ui/*        landing, join, HUD, panels, 2D map
-src/app/api/*              Razorpay order + webhook
+src/app/api/*              Dodo Payments checkout + webhook
 supabase/schema.sql        production schema
 ```

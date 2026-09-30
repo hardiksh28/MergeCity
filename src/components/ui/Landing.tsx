@@ -6,6 +6,7 @@ import { useCity } from "@/lib/store";
 import { PLOTS_BY_ID, plotLabel } from "@/lib/city";
 import { Logo } from "./Logo";
 import { BackButton } from "./BackButton";
+import { FOUNDER_PRICE, money } from "@/lib/backend";
 
 export function Landing() {
   const residents = useCity((s) => s.residents);
@@ -115,7 +116,7 @@ function TierLadder() {
   const rows = [
     { c: "#7ee787", t: "Outskirts", d: "Free plot + house. Lights off." },
     { c: "#e9eef7", t: "+1 floor", d: "Per teammate who verifies. Up to 5." },
-    { c: "#4fd1ff", t: "Main Street", d: "₹9 via UPI. Lights on, flag up." },
+    { c: "#4fd1ff", t: "Main Street", d: `${money(FOUNDER_PRICE)} once. Lights on, flag up.` },
     { c: "#ffc15e", t: "Team tower", d: "Downtown. A lit floor per paid seat." },
   ];
   return (

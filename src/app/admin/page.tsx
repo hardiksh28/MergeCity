@@ -69,7 +69,7 @@ export default function Admin() {
             ["Last 24h", day],
             ["Referrals", data.referrals.length],
             ["Payments", data.payments.length],
-            ["Revenue", `₹${revenue.toLocaleString("en-IN")}`],
+            ["Revenue", `$${revenue.toLocaleString("en-US")}`],
           ].map(([k, v]) => (
             <div key={k} className="glass rounded-2xl p-4">
               <div className="label">{k}</div>

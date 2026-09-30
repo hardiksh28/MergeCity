@@ -52,7 +52,8 @@ create table public.payments (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references public.residents(user_id),
   amount      numeric(10,2) not null,
-  gateway_id  text not null unique,           -- idempotency for webhook retries
+  currency    text not null default 'USD',
+  gateway_id  text not null unique,           -- Dodo payment/subscription id; idempotency for webhook retries
   status      text not null,
   type        text not null check (type in ('founder','subscription')),
   created_at  timestamptz not null default now()
@@ -135,12 +136,12 @@ end $$;
 
 -- ------------------------------------------------------ payment grants
 -- Only callable with the service-role key (from the webhook route).
-create or replace function public.grant_founder(p_user_id uuid, p_gateway_id text, p_amount numeric)
+create or replace function public.grant_founder(p_user_id uuid, p_gateway_id text, p_amount numeric, p_currency text default 'USD')
 returns void language plpgsql security definer set search_path = public as $$
 declare v_plot text;
 begin
-  insert into payments (user_id, amount, gateway_id, status, type)
-  values (p_user_id, p_amount, p_gateway_id, 'captured', 'founder')
+  insert into payments (user_id, amount, currency, gateway_id, status, type)
+  values (p_user_id, p_amount, p_currency, p_gateway_id, 'succeeded', 'founder')
   on conflict (gateway_id) do nothing;
   if not found then return; end if;  -- webhook retry, already granted
 

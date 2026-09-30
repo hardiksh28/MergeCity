@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { FOUNDER_PRICE, SEAT_PRICE, backend } from "@/lib/backend";
+import { FOUNDER_PRICE, SEAT_PRICE, backend, money } from "@/lib/backend";
 import { CITY, DISTRICT_META, MAX_FLOORS, PLOTS_BY_ID, TOWERS_BY_ID, plotLabel } from "@/lib/city";
 import { visitPlot } from "@/lib/interact";
 import { GARDEN_COLORS, GARDEN_DAYS, GARDEN_WEEKS, gardenFor } from "@/lib/garden";
@@ -313,13 +313,13 @@ function HousePanel() {
                 <h4 className="font-display font-bold">Move to Main Street</h4>
                 <p className="mt-1 text-sm text-muted">Lights on, a founding-resident flag, and a Main Street address.</p>
               </div>
-              <span className="font-display text-2xl font-black text-blue">₹{FOUNDER_PRICE}</span>
+              <span className="font-display text-2xl font-black text-blue">{money(FOUNDER_PRICE)}</span>
             </div>
             <p className="mt-3 rounded-lg bg-black/30 px-3 py-2 text-xs leading-relaxed text-ink/80">
-              <b>What the ₹{FOUNDER_PRICE} is:</b> a one-time UPI payment, credited as ₹{FOUNDER_PRICE} off your first MergeMate bill. Refundable on request any time before launch. Not a subscription.
+              <b>What the {money(FOUNDER_PRICE)} is:</b> a one-time payment (card or UPI), credited as {money(FOUNDER_PRICE)} off your first MergeMate bill. Refundable on request any time before launch. Not a subscription.
             </p>
             <button className="btn btn-primary mt-3 w-full" onClick={() => set({ panel: { type: "pay" } })}>
-              Pay ₹{FOUNDER_PRICE} with UPI
+              Pay {money(FOUNDER_PRICE)}
             </button>
           </div>
         ) : (
@@ -369,12 +369,12 @@ function VacantPanel({ plotId }: { plotId: string }) {
       <p className="text-sm text-muted">{DISTRICT_META[p.district].name}</p>
       <p className="mt-4 text-sm text-muted">
         {ms
-          ? `Reserved for founding residents. Pay ₹${FOUNDER_PRICE} and your house moves to the next free spot on Main Street.`
+          ? `Reserved for founding residents. Pay ${money(FOUNDER_PRICE)} and your house moves to the next free spot on Main Street.`
           : "Plots fill outward from HQ. The next person to verify gets the next free plot, so this one could be your teammate's."}
       </p>
       {me ? (
         <button className="btn btn-primary mt-5 w-full" onClick={() => set({ panel: ms && me.tier === "free" ? { type: "pay" } : { type: "house" } })}>
-          {ms && me.tier === "free" ? `Move to Main Street · ₹${FOUNDER_PRICE}` : "Get my invite link"}
+          {ms && me.tier === "free" ? `Move to Main Street · ${money(FOUNDER_PRICE)}` : "Get my invite link"}
         </button>
       ) : (
         <button className="btn btn-primary mt-5 w-full" onClick={() => set({ phase: "join", panel: null })}>
@@ -509,7 +509,7 @@ function RegistryPanel() {
   );
 }
 
-/** Demo stand-in for a real Razorpay/Cashfree UPI checkout. */
+/** Demo stand-in for the real Dodo Payments checkout (cards worldwide, UPI in India). */
 function PayPanel() {
   const me = useCity((s) => s.me);
   const set = useCity((s) => s.set);
@@ -541,7 +541,7 @@ function PayPanel() {
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-amber/60 bg-amber/15 text-3xl text-amber">⚑</div>
         <h3 className="mt-4 font-display text-2xl font-black">You&apos;re a founding resident</h3>
         <p className="mt-2 text-sm text-muted">Your house moved to {newPlot}. Lights on, flag up.</p>
-        <p className="mt-3 text-xs text-dim">Receipt #{me.id.slice(0, 8).toUpperCase()} · ₹{FOUNDER_PRICE} credited to your first bill.</p>
+        <p className="mt-3 text-xs text-dim">Receipt #{me.id.slice(0, 8).toUpperCase()} · {money(FOUNDER_PRICE)} credited to your first bill.</p>
         <button className="btn btn-gold mt-6 w-full" onClick={() => set({ panel: null })}>
           Walk to my new house
         </button>
@@ -554,8 +554,8 @@ function PayPanel() {
       <h3 className="mt-2 font-display text-2xl font-black">Move to Main Street</h3>
       <div className="mt-4 flex items-center justify-between rounded-2xl border border-line bg-white/[0.02] p-4">
         <div>
-          <div className="text-sm text-muted">One-time · UPI</div>
-          <div className="font-display text-4xl font-black">₹{FOUNDER_PRICE}</div>
+          <div className="text-sm text-muted">One-time · USD</div>
+          <div className="font-display text-4xl font-black">{money(FOUNDER_PRICE)}</div>
         </div>
         <ul className="space-y-1 text-right text-xs text-muted">
           <li>✓ Main Street address</li>
@@ -564,14 +564,14 @@ function PayPanel() {
         </ul>
       </div>
       <div className="mt-3 rounded-xl border border-line bg-black/30 p-3 text-xs leading-relaxed text-ink/85">
-        <b>Plainly:</b> you pay ₹{FOUNDER_PRICE} once. It becomes a ₹{FOUNDER_PRICE} credit on your first MergeMate bill. If you change your mind before launch, email us and we refund it. Nothing recurring, no card stored.
+        <b>Plainly:</b> you pay {money(FOUNDER_PRICE)} once. It becomes a {money(FOUNDER_PRICE)} credit on your first MergeMate bill. If you change your mind before launch, email us and we refund it. Nothing recurring, no card stored.
       </div>
 
       {step === "waiting" ? (
         <div className="mt-5 flex items-center gap-4 rounded-2xl border border-cyan/30 bg-cyan/5 p-4">
           <FakeQR />
           <div className="text-sm">
-            <b>Waiting for UPI confirmation…</b>
+            <b>Waiting for payment confirmation…</b>
             <p className="mt-1 text-xs text-muted">Your house moves only after the payment gateway confirms, never before.</p>
           </div>
         </div>
@@ -579,13 +579,13 @@ function PayPanel() {
         <>
           {err && <p className="mt-4 text-sm text-red">{err}</p>}
           <button className="btn btn-primary mt-5 w-full" onClick={pay}>
-            Pay ₹{FOUNDER_PRICE} with any UPI app
+            Pay {money(FOUNDER_PRICE)}
           </button>
-          <p className="mt-2 text-center text-[11px] text-dim">GPay · PhonePe · Paytm · BHIM · Secured by Razorpay</p>
+          <p className="mt-2 text-center text-[11px] text-dim">Cards worldwide · UPI in India · Secured by Dodo Payments</p>
         </>
       )}
       <p className="mt-4 rounded-lg border border-dashed border-amber/30 px-3 py-2 text-[11px] text-amber/80">
-        Demo mode: no money moves. The live build opens Razorpay Checkout and upgrades your house from the payment webhook.
+        Demo mode: no money moves. The live build opens Dodo Payments checkout and upgrades your house from the payment webhook.
       </p>
     </div>
   );
@@ -672,16 +672,16 @@ function TeamPanel({ towerId }: { towerId?: string }) {
           </div>
           <div className="flex items-center justify-between rounded-xl border border-line bg-white/[0.02] p-3">
             <span className="text-sm text-muted">
-              {seats} × ₹{SEAT_PRICE}/mo
+              {seats} × {money(SEAT_PRICE)}/mo
             </span>
-            <span className="font-display text-xl font-black">₹{(seats * SEAT_PRICE).toLocaleString("en-IN")}/mo</span>
+            <span className="font-display text-xl font-black">{money(seats * SEAT_PRICE)}/mo</span>
           </div>
-          <p className="text-xs text-muted">Billed monthly with UPI Autopay. One approval in your UPI app sets up the mandate. Cancel any time from the same app.</p>
+          <p className="text-xs text-muted">Billed monthly in USD by card, or UPI Autopay in India. Change seats or cancel any time.</p>
           {err && <p className="text-sm text-red">{err}</p>}
           <button className="btn btn-primary w-full" disabled={busy || !name.trim()} onClick={claim}>
-            {busy ? "Waiting for mandate approval…" : "Set up UPI Autopay"}
+            {busy ? "Waiting for payment confirmation…" : `Subscribe · ${money(seats * SEAT_PRICE)}/mo`}
           </button>
-          <p className="rounded-lg border border-dashed border-amber/30 px-3 py-2 text-[11px] text-amber/80">Demo mode: no mandate is created and nothing is charged.</p>
+          <p className="rounded-lg border border-dashed border-amber/30 px-3 py-2 text-[11px] text-amber/80">Demo mode: no subscription is created and nothing is charged.</p>
         </div>
       )}
     </div>
