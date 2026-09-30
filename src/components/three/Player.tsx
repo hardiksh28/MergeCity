@@ -103,7 +103,7 @@ export function Player() {
     }
     if (light.current) {
       light.current.position.set(R.pos.x, R.pos.y + 3.2, R.pos.z);
-      light.current.intensity = 14 + Math.sin(clock.elapsedTime * 2) * 2;
+      light.current.intensity = 10;
     }
 
     if (s.phase === "explore" && clock.elapsedTime - lastPrompt.current > 0.1) {
@@ -119,7 +119,7 @@ export function Player() {
       <group ref={group}>
         <Character look={look} anim={anim} name={me ? me.handle : undefined} highlight />
       </group>
-      <pointLight ref={light} color={look.outfit} distance={14} decay={1.6} intensity={14} />
+      <pointLight ref={light} color="#ffe6c4" distance={12} decay={1.6} intensity={10} />
     </>
   );
 }

@@ -12,6 +12,7 @@ export type Panel =
   | { type: "vacant"; plotId: string }
   | { type: "tower"; towerId: string }
   | { type: "hq" }
+  | { type: "registry" }
   | { type: "pay" }
   | { type: "team"; towerId?: string }
   | null;
@@ -51,6 +52,8 @@ interface State {
   ref: string | null;
 
   panel: Panel;
+  /** Panels you came from, so "Back" returns to them. */
+  panelStack: Exclude<Panel, null>[];
   prompt: Prompt | null;
   toasts: Toast[];
   arrivals: Arrival[];
@@ -78,10 +81,11 @@ export const useCity = create<State>((set, get) => ({
   teams: [],
   me: null,
   guest: false,
-  draftLook: { outfit: "#ff2bd6", skin: "#c98e62", head: "spiky" },
+  draftLook: { outfit: "#4fd1ff", skin: "#c98e62", head: "short" },
   ref: null,
 
   panel: null,
+  panelStack: [],
   prompt: null,
   toasts: [],
   arrivals: [],
@@ -89,7 +93,15 @@ export const useCity = create<State>((set, get) => ({
   camFocus: null,
   welcome: null,
 
-  set: (p) => set(p),
+  set: (p) => {
+    // Opening a panel on top of another remembers the one underneath.
+    if ("panel" in p && !("panelStack" in p)) {
+      const cur = get().panel;
+      if (!p.panel) p = { ...p, panelStack: [] };
+      else if (cur && JSON.stringify(cur) !== JSON.stringify(p.panel)) p = { ...p, panelStack: [...get().panelStack, cur] };
+    }
+    set(p);
+  },
   toast: (text, tone = "info") => {
     const id = ++toastId;
     set({ toasts: [...get().toasts.slice(-3), { id, text, tone }] });

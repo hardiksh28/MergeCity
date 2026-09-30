@@ -10,7 +10,7 @@ export function Avatar({ look, size = 56 }: { look: Look; size?: number }) {
       style={{
         width: size,
         height: size,
-        background: `radial-gradient(circle at 50% 120%, ${look.outfit}66, transparent 70%), #0d0719`,
+        background: `radial-gradient(circle at 50% 120%, ${look.outfit}66, transparent 70%), #0b1220`,
         boxShadow: `inset 0 0 0 1px ${look.outfit}55`,
       }}
       aria-hidden
@@ -20,7 +20,7 @@ export function Avatar({ look, size = 56 }: { look: Look; size?: number }) {
       {/* head */}
       <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 12 * s, width: 24 * s, height: 24 * s, background: look.skin, borderRadius: 5 * s }} />
       {/* visor */}
-      <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 24 * s, width: 20 * s, height: 4 * s, background: "#7ff9ff", boxShadow: "0 0 8px #22f3ff", borderRadius: 2 }} />
+      <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 24 * s, width: 20 * s, height: 4 * s, background: "#7ff9ff", boxShadow: "0 0 8px #4fd1ff", borderRadius: 2 }} />
       {look.head === "short" && <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 9 * s, width: 26 * s, height: 7 * s, background: hair, borderRadius: 3 * s }} />}
       {look.head === "spiky" && (
         <div className="absolute left-1/2 -translate-x-1/2 flex" style={{ top: 3 * s, gap: 1 * s }}>
@@ -42,7 +42,7 @@ export function Avatar({ look, size = 56 }: { look: Look; size?: number }) {
           <div className="absolute left-1/2 -translate-x-1/2 rounded-full" style={{ top: 3 * s, width: 6 * s, height: 6 * s, background: "#fff" }} />
         </>
       )}
-      {look.head === "halo" && <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%]" style={{ top: 4 * s, width: 22 * s, height: 6 * s, border: `${2 * s}px solid #ffd35a`, boxShadow: "0 0 10px #ffb020" }} />}
+      {look.head === "halo" && <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%]" style={{ top: 4 * s, width: 22 * s, height: 6 * s, border: `${2 * s}px solid #ffd35a`, boxShadow: "0 0 10px #ffc15e" }} />}
     </div>
   );
 }

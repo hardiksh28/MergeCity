@@ -13,7 +13,7 @@ import { hashString, mulberry32, pick } from "./rng";
 import type { Headwear, JoinInput, Look, Me, PublicResident, Team, Tier } from "./types";
 import { cleanHandle, isBlockedName, isValidEmail, isValidGithub } from "./moderation";
 
-export const OUTFITS = ["#ff2bd6", "#22f3ff", "#b6ff3b", "#ffb020", "#8b5cff", "#ff4d4d", "#f5f5f5", "#1f1f2e"];
+export const OUTFITS = ["#4fd1ff", "#5b7cff", "#7ee787", "#ffc15e", "#ff8a4c", "#e5484d", "#eceff4", "#2e3440"];
 export const SKINS = ["#f6d7c3", "#e8b894", "#c98e62", "#a86b43", "#7a4a2a", "#4e2f1c"];
 export const HEADWEAR: { id: Headwear; label: string }[] = [
   { id: "short", label: "Short" },
@@ -37,7 +37,7 @@ interface Row extends PublicResident {
 }
 
 interface DB {
-  v: 3;
+  v: 4;
   residents: Row[];
   referrals: { referrerId: string; referredId: string; verifiedAt: number }[];
   payments: { userId: string; amount: number; gatewayId: string; status: "captured"; type: "founder" | "subscription"; at: number }[];
@@ -113,17 +113,18 @@ function fakeResident(db: DB, rand: () => number, at: number, opts: { tier?: Tie
 
 function seed(): DB {
   const rand = mulberry32(9);
-  const db: DB = { v: 3, residents: [], referrals: [], payments: [], teams: [], codes: {}, meId: null, lastSeen: null, clock: now() };
+  const db: DB = { v: 4, residents: [], referrals: [], payments: [], teams: [], codes: {}, meId: null, lastSeen: null, clock: now() };
   const start = now() - 1000 * 60 * 60 * 24 * 21;
-  const total = 190;
+  // A young city: a handful of houses near the centre, the rest is open land.
+  const total = 34;
   for (let i = 0; i < total; i++) {
-    const founder = rand() < 0.16;
+    const founder = rand() < 0.14;
     const floors = founder ? 1 + Math.floor(rand() * 4) : rand() < 0.35 ? 1 + Math.ceil(rand() * 3) : 1;
     const r = fakeResident(db, rand, start + (i / total) * (now() - start - 3.6e6), { tier: founder ? "founder" : "free", floors });
     if (r) db.residents.push(r);
   }
   // A handful of claimed towers so Downtown isn't empty; the rest stay open.
-  const towers = [...CITY.towers].sort(() => rand() - 0.5).slice(0, COMPANIES.length);
+  const towers = [...CITY.towers].sort(() => rand() - 0.5).slice(0, 3);
   towers.forEach((t, k) => {
     db.teams.push({ id: makeId(rand), name: COMPANIES[k], towerId: t.id, seats: 3 + Math.floor(rand() * Math.min(18, t.floors - 3)), ownerId: null });
   });
@@ -136,7 +137,7 @@ function load(): DB {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as DB;
-      if (parsed.v === 3) return (cache = parsed);
+      if (parsed.v === 4) return (cache = parsed);
     }
   } catch {
     /* private mode or corrupted: start fresh */
@@ -342,7 +343,7 @@ export const backend = {
   catchUp() {
     const db = load();
     const mins = (now() - db.clock) / 60e3;
-    const n = Math.min(9, Math.floor(mins / 4));
+    const n = Math.min(4, Math.floor(mins / 10));
     for (let i = 0; i < n; i++) {
       const r = fakeResident(db, Math.random, db.clock + ((i + 1) / (n + 1)) * (now() - db.clock));
       if (r) db.residents.push(r);

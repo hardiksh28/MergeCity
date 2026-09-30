@@ -3,13 +3,17 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { FOUNDER_PRICE, SEAT_PRICE, backend } from "@/lib/backend";
 import { CITY, DISTRICT_META, MAX_FLOORS, PLOTS_BY_ID, TOWERS_BY_ID, plotLabel } from "@/lib/city";
+import { visitPlot } from "@/lib/interact";
 import { GARDEN_COLORS, GARDEN_DAYS, GARDEN_WEEKS, gardenFor } from "@/lib/garden";
 import { runtime, useCity } from "@/lib/store";
 import type { Tier } from "@/lib/types";
 import { Avatar } from "./Avatar";
+import { BackButton } from "./BackButton";
+import { Deed, fmtDate, registryNo } from "./Deed";
 
 export function Panels() {
   const panel = useCity((s) => s.panel);
+  const depth = useCity((s) => s.panelStack.length);
   const set = useCity((s) => s.set);
   if (!panel) return null;
   const close = () => set({ panel: null });
@@ -29,7 +33,8 @@ export function Panels() {
       body = <TowerPanel towerId={panel.towerId} />;
       break;
     case "hq":
-      body = <HQPanel />;
+    case "registry":
+      body = <RegistryPanel />;
       break;
     case "pay":
       body = <PayPanel />;
@@ -42,12 +47,15 @@ export function Panels() {
   return (
     <div className="absolute inset-0 z-30 flex items-end justify-center sm:items-start sm:justify-end sm:p-5">
       <button aria-label="Close" className="absolute inset-0 bg-black/40 sm:bg-black/20" onClick={close} />
-      <aside role="dialog" aria-modal className="glass sheet-in relative flex max-h-[84dvh] w-full flex-col rounded-t-3xl !bg-[rgba(10,5,22,0.88)] sm:max-h-[calc(100dvh-2.5rem)] sm:w-[420px] sm:rounded-3xl">
+      <aside role="dialog" aria-modal className="glass sheet-in relative flex max-h-[84dvh] w-full flex-col rounded-t-3xl !bg-[rgba(8,13,24,0.88)] sm:max-h-[calc(100dvh-2.5rem)] sm:w-[420px] sm:rounded-3xl">
         <button onClick={close} aria-label="Close panel" className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full border border-line text-muted hover:text-ink">
           ✕
         </button>
         <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-white/20 sm:hidden" />
-        <div className="no-scrollbar overflow-y-auto p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-6">{body}</div>
+        <div className="flex items-center px-5 pt-4 sm:px-6 sm:pt-5">
+          <BackButton label={depth ? "Back" : "Close"} />
+        </div>
+        <div className="no-scrollbar overflow-y-auto p-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-6 sm:pt-4">{body}</div>
       </aside>
     </div>
   );
@@ -57,9 +65,9 @@ export function Panels() {
 
 function TierBadge({ tier }: { tier: Tier }) {
   const m = {
-    free: { t: "Outskirts resident", c: "#8b5cff" },
-    founder: { t: "Founding resident", c: "#ffb020" },
-    team: { t: "Tower team", c: "#22f3ff" },
+    free: { t: "Outskirts resident", c: "#7ee787" },
+    founder: { t: "Founding resident", c: "#4fd1ff" },
+    team: { t: "Tower team", c: "#ffc15e" },
   }[tier];
   return (
     <span className="chip !py-1" style={{ color: m.c, borderColor: m.c + "66" }}>
@@ -92,7 +100,7 @@ function Floors({ n }: { n: number }) {
   return (
     <div className="flex flex-col-reverse gap-1">
       {Array.from({ length: MAX_FLOORS }).map((_, i) => (
-        <div key={i} className="h-2.5 w-10 rounded-sm" style={{ background: i < n ? "#b6ff3b" : "rgba(255,255,255,.07)", boxShadow: i < n ? "0 0 10px #b6ff3b88" : undefined }} />
+        <div key={i} className="h-2.5 w-10 rounded-sm" style={{ background: i < n ? "#7ee787" : "rgba(255,255,255,.07)", boxShadow: i < n ? "0 0 10px #7ee78788" : undefined }} />
       ))}
     </div>
   );
@@ -143,8 +151,8 @@ function NeighbourPanel({ id }: { id: string }) {
       </p>
       <div className="mt-4 grid grid-cols-3 gap-2">
         <Stat k="In line" v={`#${r.place}`} />
-        <Stat k="Floors" v={`${r.floors}/${MAX_FLOORS}`} c="#b6ff3b" />
-        <Stat k="Lights" v={r.tier === "free" && !launch ? "Off" : "On"} c={r.tier === "free" && !launch ? "#6f6390" : "#ffb020"} />
+        <Stat k="Floors" v={`${r.floors}/${MAX_FLOORS}`} c="#7ee787" />
+        <Stat k="Lights" v={r.tier === "free" && !launch ? "Off" : "On"} c={r.tier === "free" && !launch ? "#66748c" : "#ffc15e"} />
       </div>
       {r.github && (
         <div className="mt-5">
@@ -220,7 +228,7 @@ function HousePanel() {
         Your ticket
       </p>
       {/* ticket */}
-      <div className="relative mt-3 overflow-hidden rounded-2xl border" style={{ borderColor: meta.color + "55", background: `linear-gradient(135deg, ${meta.color}22, transparent 60%), #0b0617` }}>
+      <div className="relative mt-3 overflow-hidden rounded-2xl border" style={{ borderColor: meta.color + "55", background: `linear-gradient(135deg, ${meta.color}22, transparent 60%), #0b1220` }}>
         <div className="flex items-center gap-4 p-4">
           <Avatar look={me.look} size={64} />
           <div className="min-w-0 flex-1">
@@ -232,8 +240,8 @@ function HousePanel() {
           </div>
         </div>
         <div className="relative border-t border-dashed px-4 py-3" style={{ borderColor: meta.color + "44" }}>
-          <span className="absolute -left-2.5 -top-2.5 h-5 w-5 rounded-full bg-[#0a0516]" />
-          <span className="absolute -right-2.5 -top-2.5 h-5 w-5 rounded-full bg-[#0a0516]" />
+          <span className="absolute -left-2.5 -top-2.5 h-5 w-5 rounded-full bg-[#0b1220]" />
+          <span className="absolute -right-2.5 -top-2.5 h-5 w-5 rounded-full bg-[#0b1220]" />
           <div className="flex items-end justify-between">
             <div>
               <div className="label !text-[10px]">Place in line</div>
@@ -252,6 +260,10 @@ function HousePanel() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="mt-4">
+        <Deed r={me} />
       </div>
 
       {me.github && (
@@ -295,13 +307,13 @@ function HousePanel() {
       <section className="mt-6 space-y-3">
         <p className="label">Upgrades</p>
         {me.tier === "free" ? (
-          <div className="rounded-2xl border border-pink/40 p-4" style={{ background: "linear-gradient(135deg, rgba(255,43,214,.14), transparent 70%)" }}>
+          <div className="rounded-2xl border border-blue/40 p-4" style={{ background: "linear-gradient(135deg, rgba(79,209,255,.14), transparent 70%)" }}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h4 className="font-display font-bold">Move to Main Street</h4>
                 <p className="mt-1 text-sm text-muted">Lights on, a founding-resident flag, and a Main Street address.</p>
               </div>
-              <span className="font-display text-2xl font-black text-pink">₹{FOUNDER_PRICE}</span>
+              <span className="font-display text-2xl font-black text-blue">₹{FOUNDER_PRICE}</span>
             </div>
             <p className="mt-3 rounded-lg bg-black/30 px-3 py-2 text-xs leading-relaxed text-ink/80">
               <b>What the ₹{FOUNDER_PRICE} is:</b> a one-time UPI payment, credited as ₹{FOUNDER_PRICE} off your first MergeMate bill. Refundable on request any time before launch. Not a subscription.
@@ -379,7 +391,7 @@ function TowerPanel({ towerId }: { towerId: string }) {
   const set = useCity((s) => s.set);
   return (
     <div>
-      <p className="label" style={{ color: team ? t.color : "#ff6a3d" }}>
+      <p className="label" style={{ color: team ? t.color : "#ffc15e" }}>
         Downtown · Tower {t.id}
       </p>
       <h3 className="mt-2 font-display text-2xl font-black">{team ? team.name : "Unclaimed tower"}</h3>
@@ -408,22 +420,88 @@ function TowerPanel({ towerId }: { towerId: string }) {
   );
 }
 
-function HQPanel() {
+/** The city's land registry: every verified signup is a registered plot. */
+function RegistryPanel() {
   const residents = useCity((s) => s.residents);
   const teams = useCity((s) => s.teams);
+  const me = useCity((s) => s.me);
   const launch = useCity((s) => s.launch);
   const set = useCity((s) => s.set);
-  const founders = residents.filter((r) => r.tier !== "free").length;
+  const [q, setQ] = useState("");
+
+  const total = CITY.plots.length;
+  const openMain = CITY.plots.filter((p) => p.district === "mainstreet").length - residents.filter((r) => PLOTS_BY_ID.get(r.plotId)?.district === "mainstreet").length;
+  const list = useMemo(() => {
+    const s = q.trim().toLowerCase().replace(/^#/, "");
+    return [...residents]
+      .sort((a, b) => b.place - a.place)
+      .filter((r) => {
+        if (!s) return true;
+        const p = PLOTS_BY_ID.get(r.plotId);
+        return r.handle.toLowerCase().includes(s) || String(p?.num) === s || registryNo(r.place).toLowerCase().includes(s);
+      })
+      .slice(0, 60);
+  }, [residents, q]);
+
+  const visit = (id: string) => {
+    const r = residents.find((x) => x.id === id);
+    const p = r && PLOTS_BY_ID.get(r.plotId);
+    if (!p) return;
+    visitPlot(p.id);
+    set({ panel: null, phase: "explore", guest: !me });
+  };
+
   return (
     <div>
-      <p className="label !text-pink">The centre of the city</p>
-      <h3 className="mt-2 font-display text-2xl font-black">MergeMate HQ</h3>
-      <p className="mt-3 text-sm text-muted">MergeMate is still being built. Everyone in this city gets in first when it opens, in the order they moved in.</p>
+      <p className="label !text-cyan">Registry Plaza</p>
+      <h3 className="mt-2 font-display text-2xl font-black">MergeCity Land Registry</h3>
+      <p className="mt-2 text-sm text-muted">Every verified signup is registered to a plot of land. Plots are handed out in order, closest to the centre first.</p>
       <div className="mt-4 grid grid-cols-3 gap-2">
-        <Stat k="Residents" v={residents.length} />
-        <Stat k="Founders" v={founders} c="#ffb020" />
-        <Stat k="Towers" v={`${teams.length}/${CITY.towers.length}`} c="#22f3ff" />
+        <Stat k="Registered" v={residents.length} c="#7ee787" />
+        <Stat k="Open land" v={total - residents.length} />
+        <Stat k="Towers" v={`${teams.length}/${CITY.towers.length}`} c="#ffc15e" />
       </div>
+      <p className="mt-2 text-xs text-dim">{openMain} Main Street plots left for founding residents.</p>
+
+      {me ? (
+        <div className="mt-5">
+          <p className="label mb-2">Your deed</p>
+          <Deed r={me} compact />
+        </div>
+      ) : (
+        <button className="btn btn-primary mt-5 w-full" onClick={() => set({ phase: "join", panel: null })}>
+          Register a plot →
+        </button>
+      )}
+
+      <div className="mt-6">
+        <input className="field !py-2.5 text-sm" placeholder="Search name, plot no. or MC-000123" value={q} onChange={(e) => setQ(e.target.value)} />
+        <ul className="mt-3 divide-y divide-line/60 overflow-hidden rounded-xl border border-line">
+          {list.map((r) => {
+            const p = PLOTS_BY_ID.get(r.plotId);
+            if (!p) return null;
+            const meta = DISTRICT_META[p.district];
+            return (
+              <li key={r.id} className={`flex items-center gap-3 px-3 py-2.5 ${r.id === me?.id ? "bg-lime/10" : ""}`}>
+                <Avatar look={r.look} size={32} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm">
+                    {r.handle} {r.id === me?.id && <span className="text-lime">(you)</span>}
+                  </p>
+                  <p className="truncate font-mono text-[11px] text-dim">
+                    {registryNo(r.place)} · <span style={{ color: meta.color }}>Plot {p.num}</span> · {fmtDate(r.joinedAt)}
+                  </p>
+                </div>
+                <button className="chip !py-1 hover:!text-ink" onClick={() => visit(r.id)}>
+                  Visit
+                </button>
+              </li>
+            );
+          })}
+          {list.length === 0 && <li className="px-3 py-4 text-sm text-muted">No registered plot matches that.</li>}
+        </ul>
+      </div>
+
       <button className="btn btn-ghost mt-5 w-full" onClick={() => set({ launch: !launch })}>
         {launch ? "End launch-day preview" : "Preview launch day"}
       </button>
@@ -472,7 +550,7 @@ function PayPanel() {
 
   return (
     <div>
-      <p className="label !text-pink">Founding resident</p>
+      <p className="label !text-blue">Founding resident</p>
       <h3 className="mt-2 font-display text-2xl font-black">Move to Main Street</h3>
       <div className="mt-4 flex items-center justify-between rounded-2xl border border-line bg-white/[0.02] p-4">
         <div>
@@ -578,7 +656,7 @@ function TeamPanel({ towerId }: { towerId?: string }) {
             <span className="label">Tower</span>
             <select className="field mt-1.5" value={tid} onChange={(e) => setTid(e.target.value)}>
               {open.map((t) => (
-                <option key={t.id} value={t.id} className="bg-[#0b0617]">
+                <option key={t.id} value={t.id} className="bg-[#0b1220]">
                   {t.id} · {t.floors} floors
                 </option>
               ))}
@@ -590,7 +668,7 @@ function TeamPanel({ towerId }: { towerId?: string }) {
           </label>
           <div>
             <span className="label">Seats · {seats}</span>
-            <input type="range" min={1} max={tower?.floors ?? 20} value={seats} onChange={(e) => setSeats(+e.target.value)} className="mt-2 w-full accent-[#22f3ff]" />
+            <input type="range" min={1} max={tower?.floors ?? 20} value={seats} onChange={(e) => setSeats(+e.target.value)} className="mt-2 w-full accent-[#4fd1ff]" />
           </div>
           <div className="flex items-center justify-between rounded-xl border border-line bg-white/[0.02] p-3">
             <span className="text-sm text-muted">

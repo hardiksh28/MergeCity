@@ -48,7 +48,7 @@ export function findPrompt(x: number, z: number): Prompt | null {
   }
 
   const dh = Math.max(Math.abs(x), Math.abs(z)) - HQ.r;
-  if (dh < 2.4) consider(dh + 0.3, { key: "hq", verb: "Visit", label: "MergeMate HQ", panel: { type: "hq" } });
+  if (dh < 2.4) consider(dh + 0.3, { key: "hq", verb: "Enter", label: "the Land Registry", panel: { type: "registry" } });
 
   return best;
 }
@@ -78,4 +78,13 @@ export function spawnAtHome() {
   // Camera on the street side, looking back at you with your house behind.
   const facing = (p.face * Math.PI) / 2;
   runtime.teleport = { x: d.x, z: d.z, facing, camYaw: facing + 0.35 };
+}
+
+/** Stand in front of a plot's door, looking at it. */
+export function visitPlot(plotId: string) {
+  const p = PLOTS_BY_ID.get(plotId);
+  if (!p) return;
+  const d = doorPoint(p, 3);
+  const facing = (-p.face * Math.PI) / 2;
+  runtime.teleport = { x: d.x, z: d.z, facing, camYaw: facing + Math.PI };
 }

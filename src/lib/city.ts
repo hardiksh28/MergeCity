@@ -5,15 +5,15 @@ import { mulberry32 } from "./rng";
 export const BLOCK = 30;
 export const ROAD = 8;
 export const INNER = BLOCK - ROAD; // 22, buildable width of a block
-export const HALF_BLOCKS = 8;
+export const HALF_BLOCKS = 7;
 export const SUB = 5.5; // sub-plot offset from block centre
 export const HOUSE = 4.4; // house footprint
 export const FLOOR_H = 2.3;
 export const MAX_FLOORS = 5;
 
-export const DOWNTOWN_R = 70;
-export const MAINSTREET_R = 125;
-export const CITY_R = 250;
+export const DOWNTOWN_R = 45;
+export const MAINSTREET_R = 110;
+export const CITY_R = 190;
 
 export type District = "plaza" | "downtown" | "mainstreet" | "outskirts";
 export type PlotDistrict = "mainstreet" | "outskirts";
@@ -22,20 +22,20 @@ export const DISTRICT_META: Record<
   District,
   { name: string; color: string; blurb: string }
 > = {
-  plaza: { name: "HQ Plaza", color: "#ffffff", blurb: "MergeMate HQ" },
+  plaza: { name: "Registry Plaza", color: "#ffffff", blurb: "MergeCity Land Registry" },
   downtown: {
     name: "Downtown",
-    color: "#22f3ff",
+    color: "#ffc15e",
     blurb: "Team towers. One lit floor per paid seat.",
   },
   mainstreet: {
     name: "Main Street",
-    color: "#ff2bd6",
+    color: "#4fd1ff",
     blurb: "Founding residents. Lights on, flags up.",
   },
   outskirts: {
     name: "The Outskirts",
-    color: "#8b5cff",
+    color: "#7ee787",
     blurb: "Everyone starts here. Invite teammates to build up.",
   },
 };
@@ -81,7 +81,7 @@ export interface Arch {
 }
 
 export const TOWER_FLOOR_H = 4;
-const TOWER_COLORS = ["#22f3ff", "#ff2bd6", "#b6ff3b", "#ffb020", "#8b5cff"];
+const TOWER_COLORS = ["#4fd1ff", "#ffc15e", "#7ee787", "#6b8cff", "#ff9f5a"];
 
 export function districtAt(x: number, z: number): District {
   const d = Math.hypot(x, z);
@@ -113,7 +113,7 @@ function build() {
         blocks.push({ i, j, district: "downtown" });
         const w = 13 + rand() * 6;
         const dd = 13 + rand() * 6;
-        const floors = Math.round(14 + rand() * 18 + (DOWNTOWN_R - d) * 0.18);
+        const floors = Math.round(12 + rand() * 10 + (DOWNTOWN_R - d) * 0.15);
         towers.push({
           id: "",
           num: 0,
@@ -202,7 +202,7 @@ function build() {
 export const CITY = build();
 export const PLOTS_BY_ID = new Map(CITY.plots.map((p) => [p.id, p]));
 export const TOWERS_BY_ID = new Map(CITY.towers.map((t) => [t.id, t]));
-export const HQ = { r: 4.5, h: 210 };
+export const HQ = { r: 4.5, h: 130 };
 
 export function plotLabel(p: Plot) {
   return `${DISTRICT_META[p.district].name} · Plot ${p.num}`;

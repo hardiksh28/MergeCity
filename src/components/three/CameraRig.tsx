@@ -35,7 +35,8 @@ export function CameraRig() {
     if (phase === "movein" && s.me) {
       const p = PLOTS_BY_ID.get(s.me.plotId)!;
       const d = doorPoint(p, 1.6);
-      runtime.teleport = { x: d.x, z: d.z, facing: (p.face * Math.PI) / 2 };
+      const facing = (p.face * Math.PI) / 2;
+      runtime.teleport = { x: d.x, z: d.z, facing, camYaw: facing + 0.35 };
       flight.current = { from: camera.position.clone(), fromLook: curLook.clone(), t: 0, dur: 5.2, plotId: p.id };
     }
   }, [phase, camera]);

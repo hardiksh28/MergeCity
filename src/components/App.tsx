@@ -5,6 +5,7 @@ import { Component, useEffect, useRef, type ReactNode } from "react";
 import { backend } from "@/lib/backend";
 import { PLOTS_BY_ID, plotLabel } from "@/lib/city";
 import { interact } from "@/lib/interact";
+import { goBack, installBackButton } from "@/lib/nav";
 import { runtime, useCity } from "@/lib/store";
 import { Landing } from "./ui/Landing";
 import { JoinFlow } from "./ui/JoinFlow";
@@ -99,6 +100,9 @@ export default function App() {
     };
   }, []);
 
+  // Phone / browser back button closes the top-most layer.
+  useEffect(() => installBackButton(), []);
+
   // Simulated realtime: someone new moves in every so often.
   useEffect(() => {
     let t: ReturnType<typeof setTimeout>;
@@ -107,11 +111,11 @@ export default function App() {
         const r = backend.arrival();
         if (r) {
           const p = PLOTS_BY_ID.get(r.plotId)!;
-          useCity.getState().toast(`${r.handle} just moved in · ${plotLabel(p)}`, r.tier === "founder" ? "gold" : "info");
+          useCity.getState().toast(`${r.handle} registered ${plotLabel(p)}`, r.tier === "founder" ? "gold" : "info");
           useCity.getState().arrive(r.plotId);
         }
         loop();
-      }, 22000 + Math.random() * 26000);
+      }, 45000 + Math.random() * 60000);
     };
     loop();
     return () => clearTimeout(t);
@@ -128,7 +132,7 @@ export default function App() {
       const k = e.key.toLowerCase();
       const s = useCity.getState();
       if (k === "escape") {
-        if (s.panel) s.set({ panel: null });
+        goBack();
         return;
       }
       if (s.phase !== "explore") return;
@@ -211,8 +215,9 @@ export default function App() {
     <main className="fixed inset-0 overflow-hidden bg-bg select-none">
       {/* Painted instantly, before any 3D arrives. */}
       <div className={`absolute inset-0 overflow-hidden scan-bg transition-opacity duration-[1400ms] ${show3d && sceneReady ? "opacity-0" : "opacity-100"}`}>
-        <div className="absolute inset-x-[-20%] bottom-0 h-[45%] synth-grid opacity-60" />
-        <div className="absolute left-1/2 top-[38%] -translate-x-1/2 w-[46vmin] h-[46vmin] rounded-full" style={{ background: "linear-gradient(180deg,#ffd35a,#ff2bd6 70%)", maskImage: "linear-gradient(180deg,#000 45%,transparent 45% 50%,#000 50% 60%,transparent 60% 66%,#000 66% 74%,transparent 74% 81%,#000 81% 87%,transparent 87%)", WebkitMaskImage: "linear-gradient(180deg,#000 45%,transparent 45% 50%,#000 50% 60%,transparent 60% 66%,#000 66% 74%,transparent 74% 81%,#000 81% 87%,transparent 87%)", opacity: 0.55, filter: "blur(0.5px)" }} />
+        <div className="stars absolute inset-0" />
+        <div className="moon absolute right-[16%] top-[12%] h-[9vmin] w-[9vmin] rounded-full" />
+        <div className="absolute inset-x-0 bottom-0 h-[28%]" style={{ background: "linear-gradient(180deg, transparent, #07120c 60%)" }} />
       </div>
 
       <div ref={wrap} className="absolute inset-0 touch-none" style={{ cursor: phase === "explore" ? "grab" : "default" }}>

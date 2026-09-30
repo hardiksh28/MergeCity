@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { CITY, CITY_R, DISTRICT_META, DOWNTOWN_R, HOUSE, HQ, MAINSTREET_R, PLOTS_BY_ID } from "@/lib/city";
-import { renderCityCanvas } from "@/lib/mapdraw";
-import { useCity } from "@/lib/store";
+import { MAP, drawArrow, renderCityCanvas } from "@/lib/mapdraw";
+import { runtime, useCity } from "@/lib/store";
+import { BackButton } from "./BackButton";
 
 /**
  * The clickable board. Works without WebGL, so budget phones and failed GPUs
@@ -16,7 +17,6 @@ export function Map2D() {
   const launch = useCity((s) => s.launch);
   const webgl = useCity((s) => s.webgl);
   const phase = useCity((s) => s.phase);
-  const set = useCity((s) => s.set);
   const ref = useRef<HTMLCanvasElement>(null);
   const view = useRef({ x: 0, z: 0, s: 1, init: false });
   const dirty = useRef(true);
@@ -58,13 +58,13 @@ export function Map2D() {
     const monoFont = css.getPropertyValue("--font-jbmono").trim() || "monospace";
     const draw = (t: number) => {
       raf = requestAnimationFrame(draw);
-      const pulse = me ? true : dirty.current;
+      const pulse = me || useCity.getState().phase === "explore" ? true : dirty.current;
       if (!pulse) return;
       dirty.current = false;
       const dpr = cv.width / innerWidth;
       const { x, z, s } = view.current;
       g.setTransform(1, 0, 0, 1, 0, 0);
-      g.fillStyle = "#05020c";
+      g.fillStyle = "#060a14";
       g.fillRect(0, 0, cv.width, cv.height);
       g.setTransform(dpr * s, 0, 0, dpr * s, dpr * (innerWidth / 2 - x * s), dpr * (innerHeight / 2 - z * s));
       g.imageSmoothingEnabled = s < city.ppu;
@@ -87,21 +87,28 @@ export function Map2D() {
         }
         for (const tw of CITY.towers) {
           const team = teams.find((x) => x.towerId === tw.id);
-          g.fillText(team ? team.name : `${tw.id} · open`, tw.x, tw.z);
+          g.fillText(team ? team.name : `${tw.id} · open site`, tw.x, tw.z);
         }
       }
+      g.fillStyle = "#ffffff";
+      g.font = `900 ${11 / s}px ${display}`;
+      g.fillText("LAND REGISTRY", 0, -HQ.r - 6 / s);
       // you
       const mp = me ? PLOTS_BY_ID.get(me.plotId) : null;
       if (mp) {
         const k = (Math.sin(t / 300) + 1) / 2;
-        g.strokeStyle = `rgba(182,255,59,${1 - k})`;
+        g.strokeStyle = `rgba(126,231,135,${1 - k})`;
         g.lineWidth = 2 / s;
         g.beginPath();
         g.arc(mp.x, mp.z, HOUSE * (0.8 + k * 1.6), 0, Math.PI * 2);
         g.stroke();
-        g.fillStyle = "#b6ff3b";
+        g.fillStyle = "#7ee787";
         g.font = `900 ${12 / s}px ${display}`;
-        g.fillText("YOU", mp.x, mp.z + HOUSE + 12 / s);
+        g.fillText("HOME", mp.x, mp.z + HOUSE + 12 / s);
+      }
+      // your live position while exploring
+      if (useCity.getState().phase === "explore") {
+        drawArrow(g, runtime.pos.x, runtime.pos.z, -runtime.facing + Math.PI, 9 / s, MAP.you);
       }
     };
     raf = requestAnimationFrame(draw);
@@ -191,20 +198,21 @@ export function Map2D() {
   return (
     <div className="absolute inset-0 z-10">
       <canvas ref={ref} className="absolute inset-0 h-full w-full touch-none" style={{ cursor: "grab" }} />
+      {phase !== "landing" && (
+        <div className="pointer-events-none absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] z-30 flex items-center gap-3 sm:left-5 sm:top-5">
+          {webgl && <BackButton label="Back to 3D city" />}
+          <span className="rounded-full bg-black/55 px-3 py-2 font-display text-[11px] font-bold tracking-widest text-ink backdrop-blur">CITY MAP</span>
+        </div>
+      )}
       {phase === "explore" && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <div className="glass pointer-events-auto flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 rounded-2xl !bg-[rgba(10,5,22,0.94)] px-4 py-2.5 text-[11px] text-muted">
-            <Legend c="#b6ff3b" t="You" />
-            <Legend c="#8b5cff" t="Outskirts" />
-            <Legend c="#ff2bd6" t="Main Street" />
-            <Legend c="#22f3ff" t="Team tower" />
-            <Legend c="#ff6a3d" t="Open tower" dashed />
-            <span className="text-dim">Tap a house to knock</span>
-            {webgl && (
-              <button className="chip !py-1 hover:text-ink" onClick={() => set({ map2d: false })}>
-                Back to 3D
-              </button>
-            )}
+          <div className="glass pointer-events-auto flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 rounded-2xl !bg-[rgba(8,13,24,0.94)] px-4 py-2.5 text-[11px] text-muted">
+            <Legend c={MAP.you} t="You / home" />
+            <Legend c={MAP.resident} t="Registered" />
+            <Legend c={MAP.founder} t="Founder" />
+            <Legend c={MAP.open} t="Open land" dashed />
+            <Legend c={MAP.tower} t="Tower" />
+            <span className="text-dim">Tap a house to knock · tap land to see the plot</span>
           </div>
         </div>
       )}

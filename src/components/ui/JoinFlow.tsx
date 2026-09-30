@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { HEADWEAR, OUTFITS, SKINS, backend } from "@/lib/backend";
 import { useCity } from "@/lib/store";
 import { Avatar } from "./Avatar";
-import { Logo } from "./Logo";
+import { BackButton } from "./BackButton";
 
 export function JoinFlow() {
   const phase = useCity((s) => s.phase);
@@ -74,17 +74,18 @@ export function JoinFlow() {
 
   return (
     <div className="pointer-events-none absolute inset-0 flex flex-col justify-end sm:justify-center sm:p-6">
-      <div className="pointer-events-auto absolute left-4 top-4 sm:left-6 sm:top-6">
-        <button onClick={() => set({ phase: "landing" })} className="flex items-center gap-3" aria-label="Back to the flyover">
-          <Logo small />
-        </button>
+      <div className="absolute left-4 top-[max(1rem,env(safe-area-inset-top))] sm:hidden">
+        <BackButton />
       </div>
 
       <div className="glass sheet-in pointer-events-auto flex max-h-[68dvh] w-full flex-col rounded-t-3xl sm:max-h-[calc(100dvh-3rem)] sm:w-[440px] sm:rounded-3xl">
         <div className="no-scrollbar overflow-y-auto p-5 sm:p-7">
           {phase === "join" ? (
             <form onSubmit={send} noValidate>
-              <p className="label !text-pink">Step 1 of 2 · Your residency</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="label !text-cyan">Step 1 of 2 · Your residency</p>
+                <BackButton className="hidden sm:inline-flex" />
+              </div>
               <h2 className="mt-2 font-display text-2xl font-black tracking-tight">Build your resident</h2>
               {ref && <p className="mt-2 rounded-lg border border-lime/30 bg-lime/10 px-3 py-2 text-xs text-lime">A teammate invited you. They gain a floor once you verify.</p>}
 
@@ -125,7 +126,7 @@ export function JoinFlow() {
                     {OUTFITS.map((c) => (
                       <button key={c} type="button" aria-label={`Outfit ${c}`} aria-pressed={look.outfit === c} onClick={() => set({ draftLook: { ...look, outfit: c } })}
                         className="h-8 w-8 rounded-lg transition-transform hover:scale-110"
-                        style={{ background: c, boxShadow: look.outfit === c ? `0 0 0 2px #05020c, 0 0 0 4px ${c}, 0 0 18px ${c}` : "inset 0 0 0 1px rgba(255,255,255,.15)" }} />
+                        style={{ background: c, boxShadow: look.outfit === c ? `0 0 0 2px #060a14, 0 0 0 4px ${c}, 0 0 18px ${c}` : "inset 0 0 0 1px rgba(255,255,255,.15)" }} />
                     ))}
                   </div>
                   <p className="mt-4 mb-2 text-xs text-muted">Skin tone</p>
@@ -133,7 +134,7 @@ export function JoinFlow() {
                     {SKINS.map((c) => (
                       <button key={c} type="button" aria-label={`Skin ${c}`} aria-pressed={look.skin === c} onClick={() => set({ draftLook: { ...look, skin: c } })}
                         className="h-8 w-8 rounded-full transition-transform hover:scale-110"
-                        style={{ background: c, boxShadow: look.skin === c ? `0 0 0 2px #05020c, 0 0 0 4px #fff` : "none" }} />
+                        style={{ background: c, boxShadow: look.skin === c ? `0 0 0 2px #060a14, 0 0 0 4px #fff` : "none" }} />
                     ))}
                   </div>
                   <p className="mt-4 mb-2 text-xs text-muted">Hair / hat</p>
@@ -156,7 +157,10 @@ export function JoinFlow() {
             </form>
           ) : (
             <form onSubmit={verify}>
-              <p className="label !text-pink">Step 2 of 2 · Verify</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="label !text-cyan">Step 2 of 2 · Verify</p>
+                <BackButton />
+              </div>
               <h2 className="mt-2 font-display text-2xl font-black tracking-tight">Check your inbox</h2>
               <p className="mt-2 text-sm text-muted">
                 We sent a 6-digit code to <b className="text-ink">{email}</b>. Verifying keeps fake houses out of the city.

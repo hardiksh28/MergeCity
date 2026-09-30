@@ -8,10 +8,11 @@ import { BLOCK, CITY, CITY_R, DISTRICT_META, DOWNTOWN_R, MAINSTREET_R, PLOTS_BY_
 import { mulberry32 } from "@/lib/rng";
 import { useCity } from "@/lib/store";
 import { buildInstanced, place, rgb, unitBox } from "./instancing";
-import { makeBuildingMaterial, makeGlowMaterial, makeGroundMaterial, makeHoloMaterial, makeSkyMaterial, shared } from "./shaders";
+import { makeGlowMaterial, makeGroundMaterial, makeHoloMaterial, makeSkyMaterial, shared } from "./shaders";
 import { FONT_DISPLAY, FONT_MONO } from "./fonts";
 
 const glowMat = makeGlowMaterial();
+const litMat = makeGlowMaterial({ lit: true });
 
 export function Sky() {
   const mat = useMemo(() => makeSkyMaterial(), []);
@@ -39,38 +40,41 @@ export function Ground() {
   );
 }
 
+const LAMP = "#ffcf8a";
+
 export function Lamps() {
   const meshes = useMemo(() => {
     const L = CITY.lamps;
-    const poles = buildInstanced(unitBox, glowMat, L.length, { aColor: 3, aGlow: 1 }, (i, m, set) => {
-      place(m, L[i][0], 0, L[i][1], 0.14, 5, 0.14);
-      set("aColor", 0.25, 0.22, 0.4);
-      set("aGlow", 0.5);
+    const poles = buildInstanced(unitBox, litMat, L.length, { aColor: 3, aGlow: 1 }, (i, m, set) => {
+      place(m, L[i][0], 0, L[i][1], 0.13, 5, 0.13);
+      set("aColor", 0.32, 0.34, 0.4);
+      set("aGlow", 1);
+    });
+    const arms = buildInstanced(unitBox, litMat, L.length, { aColor: 3, aGlow: 1 }, (i, m, set) => {
+      place(m, L[i][0], 4.9, L[i][1], 0.7, 0.1, 0.7);
+      set("aColor", 0.25, 0.26, 0.3);
+      set("aGlow", 1);
     });
     const heads = buildInstanced(unitBox, glowMat, L.length, { aColor: 3, aGlow: 1 }, (i, m, set) => {
-      const [x, z] = L[i];
-      place(m, x, 5, z, 0.9, 0.18, 0.9);
-      const d = Math.hypot(x, z);
-      set("aColor", ...rgb(d < DOWNTOWN_R ? "#22f3ff" : d < MAINSTREET_R ? "#ff2bd6" : "#b98cff"));
-      set("aGlow", 3.2);
+      place(m, L[i][0], 4.8, L[i][1], 0.5, 0.1, 0.5);
+      set("aColor", ...rgb(LAMP));
+      set("aGlow", 4.5);
     });
-    return [poles, heads];
+    return [poles, arms, heads];
   }, []);
-  // Soft light pools on the ground under each lamp.
+  // Warm light pools on the ground under each lamp.
   const pools = useMemo(() => {
     const mat = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       vertexShader: `attribute vec3 aColor; varying vec2 vUv; varying vec3 vC; void main(){ vUv = uv; vC = aColor; gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(position,1.0); }`,
-      fragmentShader: `varying vec2 vUv; varying vec3 vC; void main(){ float d = length(vUv - 0.5) * 2.0; gl_FragColor = vec4(vC, pow(max(0.0, 1.0 - d), 2.0) * 0.45); }`,
+      fragmentShader: `varying vec2 vUv; varying vec3 vC; void main(){ float d = length(vUv - 0.5) * 2.0; gl_FragColor = vec4(vC, pow(max(0.0, 1.0 - d), 2.2) * 0.5); }`,
     });
     const L = CITY.lamps;
     return buildInstanced(new THREE.PlaneGeometry(1, 1), mat, L.length, { aColor: 3 }, (i, m, set) => {
-      const [x, z] = L[i];
-      place(m, x, 0.03, z, 9, 9, 1, 0, -Math.PI / 2);
-      const d = Math.hypot(x, z);
-      set("aColor", ...rgb(d < DOWNTOWN_R ? "#22f3ff" : d < MAINSTREET_R ? "#ff2bd6" : "#b98cff"));
+      place(m, L[i][0], 0.04, L[i][1], 11, 11, 1, 0, -Math.PI / 2);
+      set("aColor", 0.55, 0.38, 0.2);
     });
   }, []);
   return (
@@ -85,20 +89,31 @@ export function Lamps() {
 
 export function Trees() {
   const meshes = useMemo(() => {
-    const T = CITY.trees;
-    const trunks = buildInstanced(unitBox, glowMat, T.length, { aColor: 3, aGlow: 1 }, (i, m, set) => {
+    const rand = mulberry32(41);
+    // Extra trees scattered on the wild land around the city.
+    const wild: [number, number, number][] = [];
+    for (let i = 0; i < 260; i++) {
+      const a = rand() * Math.PI * 2;
+      const r = CITY_R + 25 + rand() * 180;
+      wild.push([Math.cos(a) * r, Math.sin(a) * r, 0.9 + rand() * 1.1]);
+    }
+    const T = [...CITY.trees, ...wild];
+    const trunks = buildInstanced(unitBox, litMat, T.length, { aColor: 3, aGlow: 1 }, (i, m, set) => {
       const [x, z, s] = T[i];
-      place(m, x, 0, z, 0.3 * s, 1.6 * s, 0.3 * s);
-      set("aColor", 0.15, 0.08, 0.2);
+      place(m, x, 0, z, 0.3 * s, 1.7 * s, 0.3 * s);
+      set("aColor", 0.2, 0.14, 0.1);
       set("aGlow", 1);
     });
-    const leafGeo = new THREE.ConeGeometry(1, 1, 5, 1).translate(0, 0.5, 0);
-    const leaves = buildInstanced(leafGeo, glowMat, T.length * 2, { aColor: 3, aGlow: 1 }, (i, m, set) => {
+    const leafGeo = new THREE.ConeGeometry(1, 1, 7, 1).translate(0, 0.5, 0);
+    const leaves = buildInstanced(leafGeo, litMat, T.length * 3, { aColor: 3, aGlow: 1 }, (i, m, set) => {
       const [x, z, s] = T[i % T.length];
-      const top = i >= T.length;
-      place(m, x, (top ? 3.2 : 1.4) * s, z, (top ? 1.2 : 1.9) * s, (top ? 2.2 : 2.6) * s, (top ? 1.2 : 1.9) * s, i * 0.7);
-      set("aColor", ...rgb(top ? "#1bffc0" : "#0b5e5a"));
-      set("aGlow", top ? 1.6 : 0.9);
+      const tier = Math.floor(i / T.length);
+      const y = [1.2, 2.4, 3.4][tier] * s;
+      const w = [2.0, 1.55, 1.05][tier] * s;
+      place(m, x, y, z, w, [2.2, 1.9, 1.6][tier] * s, w, i * 0.9);
+      const c = [[0.07, 0.17, 0.1], [0.09, 0.21, 0.12], [0.11, 0.25, 0.14]][tier];
+      set("aColor", c[0], c[1], c[2]);
+      set("aGlow", 1);
     });
     return [trunks, leaves];
   }, []);
@@ -111,21 +126,20 @@ export function Trees() {
   );
 }
 
-/** A ring of megastructures beyond the city limit so the skyline never ends. */
-export function Backdrop({ count }: { count: number }) {
+/** Low hills on the horizon instead of an endless skyline. */
+export function Hills({ count }: { count: number }) {
   const mesh = useMemo(() => {
     const rand = mulberry32(77);
-    const mat = makeBuildingMaterial({ winW: 3, winH: 4.5, scan: 0.6, edge: 0.8 });
-    const cols = ["#22f3ff", "#ff2bd6", "#8b5cff", "#ffb020", "#b6ff3b"];
-    return buildInstanced(unitBox, mat, count, { aColor: 3, aData: 4 }, (i, m, set) => {
-      const a = rand() * Math.PI * 2;
-      const r = 330 + rand() * 330;
-      const behindSun = Math.abs(Math.atan2(Math.sin(a), Math.cos(a)) + Math.PI / 2) < 0.35;
-      const h = (40 + Math.pow(rand(), 2) * 260) * (behindSun ? 0.22 : 1);
-      const w = 16 + rand() * 30;
-      place(m, Math.cos(a) * r, 0, Math.sin(a) * r, w, h, 16 + rand() * 30, 0);
-      set("aColor", ...rgb(cols[Math.floor(rand() * cols.length)]));
-      set("aData", 0.18 + rand() * 0.4, rand() * 100, -1, 0.6);
+    const geo = new THREE.ConeGeometry(1, 1, 6, 1).translate(0, 0.5, 0);
+    return buildInstanced(geo, litMat, count, { aColor: 3, aGlow: 1 }, (i, m, set) => {
+      const a = (i / count) * Math.PI * 2 + rand() * 0.05;
+      const r = 520 + rand() * 260;
+      const h = 30 + rand() * 90;
+      const w = 90 + rand() * 120;
+      place(m, Math.cos(a) * r, -2, Math.sin(a) * r, w, h, w * (0.7 + rand() * 0.5), rand() * 6);
+      const k = 0.5 + rand() * 0.3;
+      set("aColor", 0.035 * k, 0.06 * k, 0.07 * k);
+      set("aGlow", 1);
     });
   }, [count]);
   useEffect(() => () => mesh.geometry.dispose(), [mesh]);
@@ -138,31 +152,30 @@ export function Arches() {
       {CITY.arches.map((a, i) => {
         const meta = DISTRICT_META[a.district];
         const span = ROAD + 1.2;
+        const c = new THREE.Color(meta.color);
         return (
           <group key={i} position={[a.x, 0, a.z]} rotation={[0, a.rotY, 0]}>
             {[-1, 1].map((k) => (
-              <mesh key={k} position={[(k * span) / 2, 5, 0]}>
-                <boxGeometry args={[0.8, 10, 0.8]} />
-                <meshBasicMaterial color={new THREE.Color(meta.color).multiplyScalar(0.25)} />
+              <mesh key={k} position={[(k * span) / 2, 4.5, 0]}>
+                <boxGeometry args={[0.7, 9, 0.7]} />
+                <meshStandardMaterial color="#2b3140" roughness={0.8} />
               </mesh>
             ))}
-            <mesh position={[0, 10.4, 0]}>
-              <boxGeometry args={[span + 1.4, 1.8, 0.5]} />
-              <meshBasicMaterial color="#07030f" />
+            <mesh position={[0, 9.3, 0]}>
+              <boxGeometry args={[span + 1.4, 1.7, 0.45]} />
+              <meshStandardMaterial color="#141925" roughness={0.6} />
             </mesh>
-            {[-1, 1].map((k) => (
-              <mesh key={k} position={[0, k > 0 ? 11.35 : 9.45, 0]}>
-                <boxGeometry args={[span + 1.4, 0.08, 0.55]} />
-                <meshBasicMaterial color={new THREE.Color(meta.color).multiplyScalar(4)} toneMapped={false} />
-              </mesh>
-            ))}
+            <mesh position={[0, 8.42, 0]}>
+              <boxGeometry args={[span + 1.4, 0.06, 0.5]} />
+              <meshBasicMaterial color={c.clone().multiplyScalar(2.2)} toneMapped={false} />
+            </mesh>
             {[1, -1].map((side) => (
               <group key={side} rotation={[0, side > 0 ? 0 : Math.PI, 0]}>
-                <Text font={FONT_DISPLAY} fontSize={0.95} position={[0, 10.55, 0.28]} anchorY="middle">
+                <Text font={FONT_DISPLAY} fontSize={0.85} position={[0, 9.5, 0.26]} anchorY="middle">
                   {meta.name.toUpperCase()}
-                  <meshBasicMaterial toneMapped={false} color={new THREE.Color(meta.color).multiplyScalar(3.5)} />
+                  <meshBasicMaterial toneMapped={false} color={c.clone().multiplyScalar(1.8)} />
                 </Text>
-                <Text font={FONT_MONO} fontSize={0.32} position={[0, 9.8, 0.28]} color="#e6dcff" anchorY="middle" maxWidth={span}>
+                <Text font={FONT_MONO} fontSize={0.28} position={[0, 8.85, 0.26]} color="#c9d4e5" anchorY="middle" maxWidth={span}>
                   {meta.blurb}
                 </Text>
               </group>
@@ -174,8 +187,8 @@ export function Arches() {
   );
 }
 
-/** Instanced hover-cars on looping lanes. Everything moves in the vertex shader. */
-export function FlyingCars({ count }: { count: number }) {
+/** A few distant aircraft lights drifting across the night sky. */
+export function Aircraft({ count }: { count: number }) {
   const mesh = useMemo(() => {
     const rand = mulberry32(5);
     const mat = new THREE.ShaderMaterial({
@@ -183,85 +196,74 @@ export function FlyingCars({ count }: { count: number }) {
       vertexShader: /* glsl */ `
         uniform float uTime;
         attribute vec4 aLane; // radius, height, speed, phase
-        attribute vec3 aColor;
-        varying vec3 vColor; varying float vTail;
+        varying float vBlink;
         void main(){
           float ang = aLane.w + uTime * aLane.z / aLane.x;
-          vec3 center = vec3(cos(ang) * aLane.x, aLane.y + sin(uTime * 0.7 + aLane.w * 3.0) * 1.5, sin(ang) * aLane.x);
-          vec3 fwd = normalize(vec3(-sin(ang), 0.0, cos(ang))) * sign(aLane.z);
-          vec3 side = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
-          // stretch the box along the direction of travel into a light streak
-          vec3 p = position;
-          vTail = clamp(-p.z + 0.5, 0.0, 1.0);
-          vec3 world = center + side * p.x * 1.4 + vec3(0.0, p.y * 0.7, 0.0) + fwd * p.z * 7.0;
-          vColor = aColor;
-          gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
+          vec3 c = vec3(cos(ang) * aLane.x, aLane.y, sin(ang) * aLane.x);
+          vec4 mv = viewMatrix * vec4(c, 1.0);
+          mv.xy += position.xy * 1.2;
+          vBlink = step(0.85, fract(uTime * 0.9 + aLane.w));
+          gl_Position = projectionMatrix * mv;
         }
       `,
-      fragmentShader: /* glsl */ `
-        varying vec3 vColor; varying float vTail;
-        void main(){ gl_FragColor = vec4(mix(vec3(3.0), vColor * 3.0, vTail) * (1.0 - vTail * 0.6), 1.0); }
-      `,
+      fragmentShader: /* glsl */ `varying float vBlink; void main(){ gl_FragColor = vec4(mix(vec3(1.2, 1.2, 1.3), vec3(3.0, 0.4, 0.3), vBlink), 1.0); }`,
     });
-    const cols = ["#ff2bd6", "#22f3ff", "#ffb020", "#ffffff", "#b6ff3b"];
-    const g = new THREE.BoxGeometry(1, 1, 1);
-    return buildInstanced(g, mat, count, { aLane: 4, aColor: 3 }, (i, _m, set) => {
-      const lane = Math.floor(rand() * 7);
-      const r = 40 + lane * 38 + rand() * 6;
-      const hgt = 26 + lane * 9 + rand() * 30;
-      const dir = rand() < 0.5 ? -1 : 1;
-      set("aLane", r, hgt, dir * (18 + rand() * 30), rand() * Math.PI * 2);
-      set("aColor", ...rgb(cols[Math.floor(rand() * cols.length)]));
+    return buildInstanced(new THREE.PlaneGeometry(1, 1), mat, count, { aLane: 4 }, (_i, _m, set) => {
+      set("aLane", 250 + rand() * 350, 140 + rand() * 120, (rand() < 0.5 ? -1 : 1) * (12 + rand() * 12), rand() * Math.PI * 2);
     });
   }, [count]);
   useEffect(() => () => mesh.geometry.dispose(), [mesh]);
   return <primitive object={mesh} />;
 }
 
-/** Neon rain in a box that follows the camera. Zero CPU cost per frame. */
-export function Rain({ count }: { count: number }) {
-  const { camera } = useThree();
+/** Fireflies drifting over the grass. GPU-only. */
+export function Fireflies({ count }: { count: number }) {
   const mat = useMemo(
     () =>
       new THREE.ShaderMaterial({
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
-        uniforms: { uTime: shared.uTime, uCam: { value: new THREE.Vector3() } },
+        uniforms: { uTime: shared.uTime },
         vertexShader: /* glsl */ `
-          uniform float uTime; uniform vec3 uCam;
-          attribute vec3 aSeed;
+          uniform float uTime;
+          attribute vec4 aSeed;
           varying float vA;
           void main(){
-            float S = 70.0;
-            vec3 base = aSeed * S;
-            base.y = mod(aSeed.y * 60.0 - uTime * (38.0 + aSeed.x * 10.0), 60.0);
-            vec3 wrapped = vec3(mod(base.x - uCam.x + S * 0.5, S) - S * 0.5, base.y, mod(base.z - uCam.z + S * 0.5, S) - S * 0.5);
-            vec3 world = vec3(uCam.x, max(uCam.y - 25.0, 0.0), uCam.z) + wrapped + vec3(0.0, position.y * 1.4, 0.0);
-            vec4 mv = viewMatrix * vec4(world, 1.0);
-            mv.x += position.x * 0.05;
-            vA = 0.08 + aSeed.z * 0.14;
+            vec3 p = vec3(aSeed.x, 0.6 + aSeed.w * 2.0, aSeed.y);
+            p.x += sin(uTime * 0.4 + aSeed.z * 20.0) * 1.8;
+            p.z += cos(uTime * 0.33 + aSeed.z * 13.0) * 1.8;
+            p.y += sin(uTime * 0.9 + aSeed.z * 7.0) * 0.4;
+            vec4 mv = viewMatrix * vec4(p, 1.0);
+            vA = pow(0.5 + 0.5 * sin(uTime * 2.2 + aSeed.z * 40.0), 3.0);
+            gl_PointSize = 90.0 / -mv.z;
             gl_Position = projectionMatrix * mv;
           }
         `,
-        fragmentShader: `varying float vA; void main(){ gl_FragColor = vec4(vec3(0.5, 0.75, 1.6), vA); }`,
+        fragmentShader: /* glsl */ `varying float vA; void main(){ float d = length(gl_PointCoord - 0.5); gl_FragColor = vec4(vec3(2.2, 2.4, 0.9), smoothstep(0.5, 0.0, d) * vA); }`,
       }),
     [],
   );
-  const mesh = useMemo(() => {
-    const rand = mulberry32(3);
-    return buildInstanced(new THREE.PlaneGeometry(1, 1), mat, count, { aSeed: 3 }, (_i, _m, set) => {
-      set("aSeed", rand(), rand(), rand());
-    });
-  }, [count, mat]);
-  useFrame(() => mat.uniforms.uCam.value.copy(camera.position));
-  return <primitive object={mesh} />;
+  const geo = useMemo(() => {
+    const rand = mulberry32(19);
+    const seed = new Float32Array(count * 4);
+    for (let i = 0; i < count; i++) {
+      const a = rand() * Math.PI * 2;
+      const r = MAINSTREET_R + rand() * (CITY_R + 60 - MAINSTREET_R);
+      seed.set([Math.cos(a) * r, Math.sin(a) * r, rand(), rand()], i * 4);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+    g.setAttribute("aSeed", new THREE.BufferAttribute(seed, 4));
+    return g;
+  }, [count]);
+  return <points geometry={geo} material={mat} frustumCulled={false} />;
 }
 
-/** Light pillars where someone just moved in. */
+/** A pillar of light where someone just registered a plot. */
 export function ArrivalBeams() {
   const arrivals = useCity((s) => s.arrivals);
-  const mat = useMemo(() => makeHoloMaterial("#b6ff3b", 0.9), []);
+  const mat = useMemo(() => makeHoloMaterial("#7ee787", 0.8), []);
   const refs = useRef<(THREE.Mesh | null)[]>([]);
   useFrame(() => {
     const now = performance.now();
@@ -302,22 +304,21 @@ export function Fireworks() {
         uniforms: { uTime: shared.uTime },
         vertexShader: /* glsl */ `
           uniform float uTime;
-          attribute vec4 aBurst; // x, y, z, phase
-          attribute vec3 aDir; attribute vec3 aColor;
+          attribute vec4 aBurst; attribute vec3 aDir; attribute vec3 aColor;
           varying vec3 vColor; varying float vA;
           void main(){
             float period = 3.2;
             float t = mod(uTime + aBurst.w, period) / period;
-            vec3 p = aBurst.xyz + aDir * 38.0 * (1.0 - pow(1.0 - t, 3.0)) + vec3(0.0, -18.0 * t * t, 0.0);
+            vec3 p = aBurst.xyz + aDir * 34.0 * (1.0 - pow(1.0 - t, 3.0)) + vec3(0.0, -16.0 * t * t, 0.0);
             vec4 mv = viewMatrix * vec4(p, 1.0);
-            gl_PointSize = (1.0 - t) * 900.0 / -mv.z;
+            gl_PointSize = (1.0 - t) * 800.0 / -mv.z;
             gl_Position = projectionMatrix * mv;
             vColor = aColor; vA = 1.0 - t;
           }
         `,
         fragmentShader: /* glsl */ `
           varying vec3 vColor; varying float vA;
-          void main(){ float d = length(gl_PointCoord - 0.5); gl_FragColor = vec4(vColor * 3.0, smoothstep(0.5, 0.0, d) * vA); }
+          void main(){ float d = length(gl_PointCoord - 0.5); gl_FragColor = vec4(vColor * 2.5, smoothstep(0.5, 0.0, d) * vA); }
         `,
       }),
     [],
@@ -327,14 +328,14 @@ export function Fireworks() {
     const burst = new Float32Array(COUNT * 4);
     const dir = new Float32Array(COUNT * 3);
     const col = new Float32Array(COUNT * 3);
-    const cols = ["#ff2bd6", "#22f3ff", "#b6ff3b", "#ffb020", "#ffffff"];
+    const cols = ["#ffc15e", "#4fd1ff", "#7ee787", "#ffffff", "#ff9f5a"];
     let b = [0, 0, 0, 0];
     let c = [1, 1, 1];
     for (let i = 0; i < COUNT; i++) {
       if (i % 60 === 0) {
         const a = rand() * Math.PI * 2;
-        const r = 30 + rand() * 180;
-        b = [Math.cos(a) * r, 90 + rand() * 90, Math.sin(a) * r, rand() * 3.2];
+        const r = 20 + rand() * 150;
+        b = [Math.cos(a) * r, 80 + rand() * 80, Math.sin(a) * r, rand() * 3.2];
         c = rgb(cols[Math.floor(rand() * cols.length)]);
       }
       const v = new THREE.Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).normalize();

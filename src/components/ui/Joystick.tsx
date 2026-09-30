@@ -33,7 +33,7 @@ export function Joystick() {
     <div
       ref={base}
       className="relative grid h-[132px] w-[132px] touch-none place-items-center rounded-full border border-white/15 bg-black/30 backdrop-blur"
-      style={{ boxShadow: "inset 0 0 30px rgba(139,92,255,.35)" }}
+      style={{ boxShadow: "inset 0 0 30px rgba(91,124,255,.35)" }}
       onPointerDown={(e) => {
         e.stopPropagation();
         id.current = e.pointerId;

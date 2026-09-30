@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { DISTRICT_META, PLOTS_BY_ID } from "@/lib/city";
 import { runtime, useCity } from "@/lib/store";
+import { Deed } from "./Deed";
 
 export function MoveIn() {
   const me = useCity((s) => s.me);
@@ -34,7 +35,7 @@ export function MoveIn() {
         <div className="absolute inset-0 flex items-end justify-center p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-10">
           <div className="glass sheet-in pointer-events-auto w-full max-w-[460px] rounded-3xl p-6 text-center sm:p-8">
             <p className="label" style={{ color: meta.color }}>
-              Keys handed over · #{me.place} in line
+              Plot registered · #{me.place} in line
             </p>
             <h2 className="mt-3 font-display text-[1.7rem] font-black leading-tight tracking-tight sm:text-3xl">
               Welcome to MergeCity,
@@ -44,9 +45,12 @@ export function MoveIn() {
               </span>
             </h2>
             <p className="mt-3 text-sm text-muted">
-              You live in {meta.name}. The lights are off for now. Every teammate who joins with your link adds a floor.
+              This land is registered to you in {meta.name}. The green beacon marks it on the map. Every teammate who joins with your link adds a floor.
             </p>
-            <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
+            <div className="mt-4">
+              <Deed r={me} compact />
+            </div>
+            <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
               <button className="btn btn-primary flex-1" onClick={() => { runtime.camYaw = runtime.facing + 0.35; set({ phase: "explore", panel: { type: "house" } }); }}>
                 Get my invite link
               </button>

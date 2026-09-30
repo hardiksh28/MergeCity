@@ -1,5 +1,5 @@
 import { CITY, CITY_R, HQ, PLOTS_BY_ID, archBoxes, houseBox, towerBox, type Box2 } from "./city";
-import type { PublicResident } from "./types";
+import type { PublicResident, Team } from "./types";
 
 // Tiny kinematic physics: circle-vs-AABB on the ground plane, plus a ray test
 // for camera collision. Much lighter than a full physics engine, which matters
@@ -10,13 +10,15 @@ let grid = new Map<string, Box2[]>();
 
 const key = (cx: number, cz: number) => `${cx},${cz}`;
 
-export function rebuildColliders(residents: PublicResident[]) {
+export function rebuildColliders(residents: PublicResident[], teams: Team[]) {
   const boxes: Box2[] = [];
   for (const r of residents) {
     const p = PLOTS_BY_ID.get(r.plotId);
     if (p) boxes.push(houseBox(p, r.floors));
   }
-  for (const t of CITY.towers) boxes.push(towerBox(t));
+  // Only built towers are solid; open tower sites are empty land.
+  const built = new Set(teams.map((t) => t.towerId));
+  for (const t of CITY.towers) if (built.has(t.id)) boxes.push(towerBox(t));
   for (const a of CITY.arches) boxes.push(...archBoxes(a));
   boxes.push({ minX: -HQ.r, maxX: HQ.r, minZ: -HQ.r, maxZ: HQ.r, h: HQ.h });
 

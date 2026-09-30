@@ -1,6 +1,6 @@
 # MergeCity
 
-The MergeMate waitlist, as a neon 3D city. Everyone who joins gets a character and a house. Referrals add floors. A ₹9 UPI payment moves you to Main Street with the lights on. Teams claim towers downtown.
+The MergeMate waitlist, as a 3D city at night. Everyone who verifies gets a registered plot of land, a character and a house. Referrals add floors. A ₹9 UPI payment moves you to Main Street with the lights on. Teams claim towers downtown.
 
 ```bash
 npm install
@@ -11,7 +11,7 @@ Useful URL flags: `?launch=1` (launch-day preview), `?map=1` (force the 2D map),
 
 ## What works today
 
-Everything in the user flow runs locally with **no backend**. A demo database lives in `localStorage` (`src/lib/backend.ts`) and is seeded with about 190 residents and 7 claimed towers.
+Everything in the user flow runs locally with **no backend**. A demo database lives in `localStorage` (`src/lib/backend.ts`) and is seeded with 34 residents and 3 claimed towers; the rest is open land.
 
 | Step | Status |
 | --- | --- |
@@ -40,33 +40,17 @@ A **one-time UPI payment, credited as ₹9 off the first MergeMate bill, refunda
 
 ## How it's built
 
-- **Next.js 16 + React Three Fiber + drei + postprocessing** (bloom, chromatic aberration, vignette, ACES).
-- **No 3D model downloads.** The city uses procedural shaders (`src/components/three/shaders.ts`): windows, neon trims, tron roads, synthwave sky. Houses, towers, lamps, trees, cars, rain and garden cells are all instanced, so the whole city takes roughly 20 draw calls. Total client JS is about 520 KB gzipped, and the 3D chunk lazy-loads after the landing page and form are already usable.
+- **Next.js 16 + React Three Fiber + drei + postprocessing** (bloom, SMAA, vignette, ACES).
+- **No 3D model downloads.** The city uses procedural shaders (`src/components/three/shaders.ts`): moonlit walls, lit windows, grass, roads, night sky with moon and stars. Houses, towers, lamps, trees, land parcels and garden cells are all instanced, so the whole city takes roughly 20 draw calls. Total client JS is about 520 KB gzipped, and the 3D chunk lazy-loads after the landing page and form are already usable.
 - **Characters** are procedural low-poly models with code-driven walk, run, idle, jump and wave animations (`Character.tsx`).
 - **Physics**: a tiny circle-vs-AABB solver plus a camera ray test (`src/lib/physics.ts`), in place of Rapier. Everything in the city is an axis-aligned box, and this is much lighter on budget Android phones.
-- **Plots** fill outward from HQ (`src/lib/city.ts`): Downtown (20 tower slots), Main Street (~140 founder plots), Outskirts (~650 plots).
+- **Plots** fill outward from the Land Registry (`src/lib/city.ts`): Downtown (8 tower sites), Main Street (~140 founder plots), Outskirts (~340 plots). 480 plots in total.
+- **Navigation**: minimap with district names, home/registry arrows and zoom; a beacon over your house; a Back button, Esc and the phone back button all close the top-most screen (`src/lib/nav.ts`).
 - **Device tiers**: weak or touch devices get lower DPR, fewer particles and no grain. Very weak devices and those without WebGL start on the 2D map, and a WebGL crash falls back to it automatically.
 
-## Going live (phase 2 and 3)
+## Going live
 
-1. **Supabase**: run `supabase/schema.sql`. It includes tables, a public view with no emails, RLS, `move_in()` (atomic plot claim and referral credit), `grant_founder()` / `grant_tower()` (idempotent), and Realtime. Seed `plots` from `CITY.plots`.
-2. Replace the `backend` object in `src/lib/backend.ts` with Supabase calls:
-   - `requestCode` → `supabase.auth.signInWithOtp({ email })`
-   - `verifyAndJoin` → `verifyOtp` then `rpc('move_in')`
-   - `city()` → `from('public_residents')` plus a Realtime channel on `residents`
-   - Delete `simulateTeammate`, `arrival`, `catchUp`, and the demo buttons.
-3. **Emails**: send them with Resend or Postmark through Supabase Auth SMTP (codes), plus a small function for "you gained a floor", "a neighbour moved in" and launch day.
-4. **Payments**: set the env vars, then point Razorpay webhooks at `/api/webhooks/razorpay`. `/api/pay/founder` creates the order and the browser opens Razorpay Checkout. Upgrades happen **only** in the webhook. For teams, use Razorpay Subscriptions with UPI Autopay and set `notes.tower_id` / `notes.team_name`. Check GST and refund terms with your accountant.
-5. **GitHub**: add GitHub OAuth in Supabase, then fetch `contributionsCollection` from the GraphQL API on the server and store it in place of `gardenFor()`.
-6. **Admin**: put `/admin` behind an admin role before it reads real data.
-
-```
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-RAZORPAY_KEY_ID=
-RAZORPAY_KEY_SECRET=
-RAZORPAY_WEBHOOK_SECRET=
-```
+See **[docs/GO-LIVE.md](docs/GO-LIVE.md)** for the step-by-step guide: Supabase, email codes, Razorpay UPI and Autopay, the legal pages Razorpay requires, env vars, and a launch checklist. `npm run db:plots` generates the plots seed SQL from the city layout.
 
 ## Map of the code
 
