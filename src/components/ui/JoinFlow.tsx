@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { HEADWEAR, OUTFITS, SKINS, backend } from "@/lib/backend";
@@ -38,6 +39,7 @@ export function JoinFlow() {
     try {
       const r = await backend.requestCode(email);
       setDevCode(r.devCode);
+      track("code_requested");
       set({ phase: "verify" });
     } catch (x) {
       setError((x as Error).message);
@@ -54,6 +56,7 @@ export function JoinFlow() {
       const me = await backend.verifyAndJoin(input, override ?? code);
       const { residents, teams } = backend.city();
       set({ me, residents, teams, phase: "movein", guest: false, welcome: null });
+      track("sign_up", { method: "email", referred: ref ? 1 : 0 });
       useCity.getState().arrive(me.plotId);
       try {
         sessionStorage.removeItem("mergecity:ref");

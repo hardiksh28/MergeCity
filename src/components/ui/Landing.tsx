@@ -10,6 +10,7 @@ import { FOUNDER_PRICE, money } from "@/lib/backend";
 import { LegalFooter } from "@/components/legal/LegalPage";
 import { Founder } from "@/components/legal/Founder";
 import { SITE } from "@/lib/site";
+import { track } from "@/lib/analytics";
 
 const SHOW_COUNT_FROM = 25;
 
@@ -98,7 +99,7 @@ export function Landing() {
               </button>
             ) : (
               <>
-                <button className="btn btn-primary text-sm sm:px-8" onClick={() => set({ phase: "join" })}>
+                <button className="btn btn-primary text-sm sm:px-8" onClick={() => { track("join_start"); set({ phase: "join" }); }}>
                   Move in <span aria-hidden>→</span>
                 </button>
                 <button className="btn btn-ghost" onClick={enter}>

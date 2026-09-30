@@ -6,6 +6,7 @@ import QRCode from "qrcode";
 import { FOUNDER_PRICE, FOUNDER_PRICE_INR, SEAT_PRICE, backend, money, rupees } from "@/lib/backend";
 import { PAY_TO, type PayMethod } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
+import { track } from "@/lib/analytics";
 import { CITY, DISTRICT_META, MAX_FLOORS, PLOTS_BY_ID, TOWERS_BY_ID, plotLabel } from "@/lib/city";
 import { visitPlot } from "@/lib/interact";
 import { GARDEN_COLORS, GARDEN_DAYS, GARDEN_WEEKS } from "@/lib/garden";
@@ -208,6 +209,7 @@ function HousePanel() {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(link);
+      track("share", { method: "copy" });
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -295,10 +297,10 @@ function HousePanel() {
           </button>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-2">
-          <a className="btn btn-ghost !px-2 !py-2.5 !text-[10px]" href={`https://wa.me/?text=${encodeURIComponent(shareText + " " + link)}`} target="_blank" rel="noopener noreferrer">
+          <a className="btn btn-ghost !px-2 !py-2.5 !text-[10px]" href={`https://wa.me/?text=${encodeURIComponent(shareText + " " + link)}`} target="_blank" rel="noopener noreferrer" onClick={() => track("share", { method: "whatsapp" })}>
             WhatsApp
           </a>
-          <a className="btn btn-ghost !px-2 !py-2.5 !text-[10px]" href={`https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(link)}`} target="_blank" rel="noopener noreferrer">
+          <a className="btn btn-ghost !px-2 !py-2.5 !text-[10px]" href={`https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(link)}`} target="_blank" rel="noopener noreferrer" onClick={() => track("share", { method: "x" })}>
             Post on X
           </a>
           <button className="btn btn-ghost !px-2 !py-2.5 !text-[10px]" onClick={share}>
@@ -570,6 +572,7 @@ function PayPanel() {
     setErr("");
     try {
       await backend.submitPayment(method, txn);
+      track("payment_submitted", { method, currency: method === "upi" ? "INR" : "USD", value: method === "upi" ? FOUNDER_PRICE_INR : FOUNDER_PRICE });
       useCity.getState().toast("Payment submitted. We'll confirm it within 24 hours.", "good");
     } catch (e) {
       setErr((e as Error).message);

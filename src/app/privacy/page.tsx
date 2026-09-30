@@ -44,7 +44,7 @@ export default function Privacy() {
       <ul>
         <li><strong>Vercel</strong>: hosting.</li>
         <li><strong>Supabase</strong>: database and sign-in.</li>
-        <li><strong>Resend</strong>: sending emails.</li>
+        <li><strong>Google</strong>: sending sign-in emails, and Google Analytics to count visits and signups.</li>
         <li><strong>PayPal</strong> and our <strong>bank / UPI app</strong>: receiving payments.</li>
         <li><strong>GitHub</strong>: only if you connect your GitHub account.</li>
       </ul>
@@ -52,7 +52,7 @@ export default function Privacy() {
 
       <h2>4. Cookies and local storage</h2>
       <p>
-        We use your browser&apos;s local storage to remember your sign-in, your graphics setting and what you last saw in the city. We do not use advertising cookies or cross-site trackers.
+        We use your browser&apos;s local storage to remember your sign-in, your graphics setting and what you last saw in the city. We use Google Analytics, which sets cookies to count visits, see which pages people use and measure signups. It doesn&apos;t receive your email or name. You can block it with any tracker blocker or Google&apos;s <a href="https://tools.google.com/dlpage/gaoptout">opt-out add-on</a>. We do not use advertising cookies.
       </p>
 
       <h2>5. How long we keep it</h2>
