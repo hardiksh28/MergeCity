@@ -157,8 +157,10 @@ function build() {
     p.num = k + 1;
     p.id = `ms-${k + 1}`;
   });
+  // Plot numbers are unique across the city (Main Street first, then the
+  // Outskirts); ids stay per-district because the database seed uses them.
   os.forEach((p, k) => {
-    p.num = k + 1;
+    p.num = ms.length + k + 1;
     p.id = `os-${k + 1}`;
   });
   towers.sort((a, b) => Math.hypot(a.x, a.z) - Math.hypot(b.x, b.z) || a.x - b.x || a.z - b.z);

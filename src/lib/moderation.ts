@@ -22,6 +22,11 @@ export function isBlockedName(name: string) {
   return BLOCKED.some((w) => n.includes(w));
 }
 
+/** "https://github.com/octocat/", "@octocat" or "octocat" -> "octocat". */
+export function normalizeGithub(raw: string) {
+  return raw.trim().replace(/^(https?:\/\/)?(www\.)?github\.com\//i, "").replace(/^@/, "").split(/[/?#]/)[0];
+}
+
 export function isValidGithub(u: string) {
   return /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i.test(u);
 }
@@ -33,7 +38,7 @@ export function isValidEmail(e: string) {
 /** Checks the join form before a code is sent. Shared by the demo and live backends. */
 export function validateJoin(input: { email: string; github: string; handle: string }): string | null {
   if (!isValidEmail(input.email.trim())) return "Enter a valid email.";
-  if (input.github && !isValidGithub(input.github.trim())) return "That GitHub username isn't valid.";
+  if (input.github && !isValidGithub(normalizeGithub(input.github))) return "That GitHub username isn't valid.";
   const h = cleanHandle(input.handle);
   if (h && isBlockedName(h)) return "Pick a different name for your door.";
   return null;

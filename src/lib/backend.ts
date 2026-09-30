@@ -11,7 +11,7 @@
 import { CITY, MAX_FLOORS, PLOTS_BY_ID, type PlotDistrict } from "./city";
 import { hashString, mulberry32, pick } from "./rng";
 import type { Headwear, JoinInput, Look, Me, PublicResident, Team, Tier } from "./types";
-import { cleanHandle, isValidEmail, validateJoin } from "./moderation";
+import { cleanHandle, isValidEmail, normalizeGithub, validateJoin } from "./moderation";
 import { LIVE, live } from "./live";
 
 export const OUTFITS = ["#4fd1ff", "#5b7cff", "#7ee787", "#ffc15e", "#ff8a4c", "#e5484d", "#eceff4", "#2e3440"];
@@ -297,7 +297,7 @@ const demo: Backend = {
     const plot = nextFreePlot(db, "outskirts");
     if (!plot) throw new Error("The city is full. We're zoning a new district.");
     const id = makeId();
-    const github = input.github.trim() || null;
+    const github = normalizeGithub(input.github) || null;
     const handle = cleanHandle(input.handle) || github || e.split("@")[0].slice(0, 14);
     const referrer = input.ref ? db.residents.find((r) => r.refCode === input.ref) : undefined;
     const row: Row = {

@@ -4,7 +4,8 @@ import { Suspense, useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { Billboard, Text } from "@react-three/drei";
 import { CITY, FLOOR_H, HOUSE, PLOTS_BY_ID } from "@/lib/city";
-import { GARDEN_COLORS, GARDEN_DAYS, GARDEN_WEEKS, gardenFor } from "@/lib/garden";
+import { GARDEN_COLORS, GARDEN_DAYS, GARDEN_WEEKS } from "@/lib/garden";
+import { gardenLevels, useGardens } from "@/lib/useGarden";
 import { useCity } from "@/lib/store";
 import { hashString } from "@/lib/rng";
 import { buildInstanced, place, rgb, unitBox } from "./instancing";
@@ -53,6 +54,8 @@ export function Houses() {
   const meId = useCity((s) => s.me?.id);
   const launch = useCity((s) => s.launch);
   const arrivals = useCity((s) => s.arrivals);
+  const gardenNames = useMemo(() => [...new Set(residents.map((r) => r.github).filter((g): g is string => !!g))], [residents]);
+  const gardensLoaded = useGardens(gardenNames);
 
   const meshes = useMemo(() => {
     const list = residents.map((r) => ({ r, p: PLOTS_BY_ID.get(r.plotId)! })).filter((x) => x.p);
@@ -112,7 +115,7 @@ export function Houses() {
 
     const gardeners = list.filter((x) => x.r.github);
     const cells = GARDEN_WEEKS * GARDEN_DAYS;
-    const levels = gardeners.map((x) => gardenFor(x.r.github!));
+    const levels = gardeners.map((x) => gardenLevels(x.r.github!));
     const garden = buildInstanced(unitBox, litMat, gardeners.length * cells, { aColor: 3, aGlow: 1 }, (i, m, set) => {
       const g = Math.floor(i / cells);
       const c = i % cells;
@@ -121,7 +124,9 @@ export function Houses() {
       const day = c % GARDEN_DAYS;
       const lvl = levels[g][c];
       const sp = 0.34;
-      place(m, p.x + (week - (GARDEN_WEEKS - 1) / 2) * sp, 0, p.z + p.gardenSide * (HOUSE / 2 + 0.5 + day * sp), 0.27, 0.04 + lvl * 0.09, 0.27);
+      // On the inner side of the house, between it and the neighbour behind:
+      // the outer side is too narrow and ran onto the pavement.
+      place(m, p.x + (week - (GARDEN_WEEKS - 1) / 2) * sp, 0, p.z - p.gardenSide * (HOUSE / 2 + 0.45 + day * sp), 0.27, 0.04 + lvl * 0.09, 0.27);
       set("aColor", ...rgb(GARDEN_COLORS[lvl]));
       set("aGlow", lvl === 0 ? 0.8 : 1 + lvl * 0.2);
     });
@@ -143,7 +148,9 @@ export function Houses() {
     });
 
     return [bodies, roofs, doors, lamps, poles, flags, garden, parcels, stakes];
-  }, [residents, meId, launch, arrivals]);
+    // gardensLoaded isn't read above, but gardenLevels() changes when it does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [residents, meId, launch, arrivals, gardensLoaded]);
 
   useEffect(() => () => meshes.forEach((m) => m.geometry.dispose()), [meshes]);
 

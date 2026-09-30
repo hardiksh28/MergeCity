@@ -8,7 +8,8 @@ import { PAY_TO, type PayMethod } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
 import { CITY, DISTRICT_META, MAX_FLOORS, PLOTS_BY_ID, TOWERS_BY_ID, plotLabel } from "@/lib/city";
 import { visitPlot } from "@/lib/interact";
-import { GARDEN_COLORS, GARDEN_DAYS, GARDEN_WEEKS, gardenFor } from "@/lib/garden";
+import { GARDEN_COLORS, GARDEN_DAYS, GARDEN_WEEKS } from "@/lib/garden";
+import { gardenLevels, useGardens } from "@/lib/useGarden";
 import { useCity } from "@/lib/store";
 import type { Tier } from "@/lib/types";
 import { Avatar } from "./Avatar";
@@ -82,7 +83,8 @@ function TierBadge({ tier }: { tier: Tier }) {
 }
 
 function Garden({ github }: { github: string }) {
-  const cells = useMemo(() => gardenFor(github), [github]);
+  useGardens([github]);
+  const cells = gardenLevels(github);
   return (
     <div>
       <div className="flex gap-[3px]">
@@ -95,7 +97,7 @@ function Garden({ github }: { github: string }) {
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[11px] text-dim">Commit garden · pattern from @{github}. Real contribution data arrives with GitHub sign-in.</p>
+      <p className="mt-2 text-[11px] text-dim">{backend.demo ? <>Commit garden · made-up pattern for @{github} in the demo.</> : <>Commit garden · the last {GARDEN_WEEKS} weeks of <a className="underline hover:text-ink" href={`https://github.com/${github}`} target="_blank" rel="noopener noreferrer">@{github}</a>&apos;s public GitHub contributions.</>}</p>
     </div>
   );
 }

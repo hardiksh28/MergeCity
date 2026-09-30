@@ -8,7 +8,7 @@
  */
 
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
-import { cleanHandle, isValidEmail, validateJoin } from "./moderation";
+import { cleanHandle, isValidEmail, normalizeGithub, validateJoin } from "./moderation";
 import { checkTxnId, type PayMethod } from "./pricing";
 import type { AdminData, Backend, PaymentClaim } from "./backend";
 import type { JoinInput, Look, Me, PublicResident, Team, Tier } from "./types";
@@ -224,7 +224,7 @@ export const live: Backend = {
     const e = input.email.trim().toLowerCase();
     const { data, error } = await sb().auth.verifyOtp({ email: e, token: code.trim(), type: "email" });
     if (error || !data.session) throw new Error("Wrong or expired code.");
-    const github = input.github.trim();
+    const github = normalizeGithub(input.github);
     const handle = cleanHandle(input.handle) || github || e.split("@")[0].slice(0, 14);
     const { error: moveErr } = await sb().rpc("move_in", { p_handle: handle, p_github: github, p_look: input.look, p_ref: input.ref ?? "" });
     if (moveErr) throw new Error(friendly(moveErr.message));
