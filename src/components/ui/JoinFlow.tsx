@@ -101,7 +101,7 @@ export function JoinFlow() {
                     <span className="label">GitHub</span>
                     <div className="relative mt-1.5">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-dim">@</span>
-                      <input className="field !pl-7" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="optional" value={github} onChange={(e) => setGithub(e.target.value.replace(/\s/g, ""))} />
+                      <input className="field !pl-7" name="github-username" autoComplete="off" data-1p-ignore data-lpignore="true" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="optional" value={github} onChange={(e) => setGithub(e.target.value.replace(/\s/g, ""))} />
                     </div>
                   </label>
                   <label className="block">
