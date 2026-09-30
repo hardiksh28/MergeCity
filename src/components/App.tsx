@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { Component, useEffect, useRef, type ReactNode } from "react";
 import { backend } from "@/lib/backend";
+import type { PublicResident } from "@/lib/types";
 import { PLOTS_BY_ID, plotLabel } from "@/lib/city";
 import { interact } from "@/lib/interact";
 import { goBack, installBackButton } from "@/lib/nav";
@@ -77,19 +78,23 @@ export default function App() {
     });
     backend.catchUp();
     refresh();
-    const diff = backend.diffSinceLastVisit();
-    const me = backend.me();
-    if (me && diff) {
-      const bits = [];
-      if (diff.newNeighbours) bits.push(`${diff.newNeighbours} new neighbour${diff.newNeighbours > 1 ? "s" : ""}`);
-      if (diff.floorsGained) bits.push(`you gained ${diff.floorsGained} floor${diff.floorsGained > 1 ? "s" : ""}`);
-      if (diff.upgraded) bits.push("your house moved");
-      useCity.getState().set({
-        welcome: bits.length ? `Welcome back, ${me.handle}. Since last time: ${bits.join(", ")}.` : `Welcome back, ${me.handle}. The lights are as you left them.`,
-      });
-    }
-    backend.markSeen();
     const unsub = backend.subscribe(refresh);
+    // The live backend loads the session and city over the network first.
+    backend.whenReady().then(() => {
+      refresh();
+      const diff = backend.diffSinceLastVisit();
+      const me = backend.me();
+      if (me && diff) {
+        const bits = [];
+        if (diff.newNeighbours) bits.push(`${diff.newNeighbours} new neighbour${diff.newNeighbours > 1 ? "s" : ""}`);
+        if (diff.floorsGained) bits.push(`you gained ${diff.floorsGained} floor${diff.floorsGained > 1 ? "s" : ""}`);
+        if (diff.upgraded) bits.push("your house moved");
+        useCity.getState().set({
+          welcome: bits.length ? `Welcome back, ${me.handle}. Since last time: ${bits.join(", ")}.` : `Welcome back, ${me.handle}. The lights are as you left them.`,
+        });
+      }
+      backend.markSeen();
+    });
     const onHide = () => document.visibilityState === "hidden" && backend.markSeen();
     document.addEventListener("visibilitychange", onHide);
     window.addEventListener("pagehide", backend.markSeen);
@@ -103,17 +108,20 @@ export default function App() {
   // Phone / browser back button closes the top-most layer.
   useEffect(() => installBackButton(), []);
 
-  // Simulated realtime: someone new moves in every so often.
+  // Someone new moves in: real signups over Realtime, or simulated ones in the demo.
   useEffect(() => {
+    const show = (r: PublicResident) => {
+      const p = PLOTS_BY_ID.get(r.plotId);
+      if (!p) return;
+      useCity.getState().toast(`${r.handle} registered ${plotLabel(p)}`, r.tier === "founder" ? "gold" : "info");
+      useCity.getState().arrive(r.plotId);
+    };
+    if (!backend.demo) return backend.onArrival(show);
     let t: ReturnType<typeof setTimeout>;
     const loop = () => {
       t = setTimeout(() => {
         const r = backend.arrival();
-        if (r) {
-          const p = PLOTS_BY_ID.get(r.plotId)!;
-          useCity.getState().toast(`${r.handle} registered ${plotLabel(p)}`, r.tier === "founder" ? "gold" : "info");
-          useCity.getState().arrive(r.plotId);
-        }
+        if (r) show(r);
         loop();
       }, 45000 + Math.random() * 60000);
     };

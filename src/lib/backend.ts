@@ -11,7 +11,8 @@
 import { CITY, MAX_FLOORS, PLOTS_BY_ID, type PlotDistrict } from "./city";
 import { hashString, mulberry32, pick } from "./rng";
 import type { Headwear, JoinInput, Look, Me, PublicResident, Team, Tier } from "./types";
-import { cleanHandle, isBlockedName, isValidEmail, isValidGithub } from "./moderation";
+import { cleanHandle, isValidEmail, validateJoin } from "./moderation";
+import { LIVE, live } from "./live";
 
 export const OUTFITS = ["#4fd1ff", "#5b7cff", "#7ee787", "#ffc15e", "#ff8a4c", "#e5484d", "#eceff4", "#2e3440"];
 export const SKINS = ["#f6d7c3", "#e8b894", "#c98e62", "#a86b43", "#7a4a2a", "#4e2f1c"];
@@ -38,6 +39,52 @@ export interface PaymentClaim {
   currency: "INR" | "USD";
   status: "pending" | "approved" | "rejected";
   at: number;
+}
+
+export interface AdminRow extends PublicResident {
+  email: string;
+  referrals: number;
+  hidden?: boolean;
+  demo?: boolean;
+}
+
+export interface AdminData {
+  residents: AdminRow[];
+  referrals: { referrerId: string; referredId: string; verifiedAt: number }[];
+  payments: { userId: string; amount: number; currency: "INR" | "USD"; gatewayId: string; at: number }[];
+  claims: PaymentClaim[];
+  teams: Team[];
+}
+
+/** What the UI needs from a backend. `demo` (below) and `live` (live.ts) both implement it. */
+export interface Backend {
+  demo: boolean;
+  subscribe(fn: () => void): () => void;
+  whenReady(): Promise<void>;
+  city(): { residents: PublicResident[]; teams: Team[] };
+  me(): Me | null;
+  requestCode(email: string): Promise<{ devCode: string }>;
+  validate(input: JoinInput): string | null;
+  verifyAndJoin(input: JoinInput, code: string): Promise<Me>;
+  signOut(): void;
+  simulateTeammate(): Promise<{ me: Me; mate: PublicResident } | null>;
+  myClaim(): PaymentClaim | null;
+  submitPayment(method: PayMethod, txnId: string): Promise<PaymentClaim>;
+  arrival(): PublicResident | null;
+  onArrival(fn: (r: PublicResident) => void): () => void;
+  catchUp(): void;
+  diffSinceLastVisit(): { newNeighbours: number; floorsGained: number; upgraded: boolean } | null;
+  markSeen(): void;
+  admin: {
+    all(): AdminData | null;
+    error(): string;
+    load(): Promise<void>;
+    approve(id: string): void | Promise<void>;
+    reject(id: string): void | Promise<void>;
+    remove(id: string): void | Promise<void>;
+    rename(id: string, handle: string): void | Promise<void>;
+    reset(): void;
+  };
 }
 
 interface Row extends PublicResident {
@@ -181,7 +228,12 @@ const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 // ---------------------------------------------------------------- public API
 
-export const backend = {
+const demo: Backend = {
+  demo: true,
+
+  whenReady: () => Promise.resolve(),
+  onArrival: () => () => {},
+
   subscribe(fn: () => void) {
     listeners.add(fn);
     const onStorage = (e: StorageEvent) => {
@@ -223,13 +275,7 @@ export const backend = {
     return { devCode: code };
   },
 
-  validate(input: JoinInput): string | null {
-    if (!isValidEmail(input.email.trim())) return "Enter a valid email.";
-    if (input.github && !isValidGithub(input.github.trim())) return "That GitHub username isn't valid.";
-    const h = cleanHandle(input.handle);
-    if (h && isBlockedName(h)) return "Pick a different name for your door.";
-    return null;
-  },
+  validate: validateJoin,
 
   async verifyAndJoin(input: JoinInput, code: string): Promise<Me> {
     await wait(700);
@@ -246,7 +292,7 @@ export const backend = {
       return toMe(db, existing);
     }
 
-    const err = backend.validate(input);
+    const err = validateJoin(input);
     if (err) throw new Error(err);
     const plot = nextFreePlot(db, "outskirts");
     if (!plot) throw new Error("The city is full. We're zoning a new district.");
@@ -393,6 +439,8 @@ export const backend = {
       const db = load();
       return { residents: db.residents, referrals: db.referrals, payments: db.payments, claims: db.claims, teams: db.teams };
     },
+    error: () => "",
+    load: async () => {},
     /** You checked your bank / PayPal and the money is there: grant the upgrade. */
     approve(claimId: string) {
       const db = load();
@@ -433,6 +481,9 @@ export const backend = {
     },
   },
 };
+
+/** Live Supabase backend when its keys are set, otherwise the local demo. */
+export const backend: Backend = LIVE ? live : demo;
 
 export function plotOf(r: { plotId: string }) {
   return PLOTS_BY_ID.get(r.plotId)!;

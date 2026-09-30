@@ -192,6 +192,7 @@ export function JoinFlow() {
                   </button>
                 </div>
               )}
+              {!devCode && <p className="mt-3 text-xs text-dim">No email after a minute? Check your spam or promotions folder.</p>}
               {error && <p role="alert" className="mt-4 text-sm text-red">{error}</p>}
               <button className="btn btn-primary mt-5 w-full" disabled={busy || code.length < 6}>
                 {busy ? "Unlocking…" : "Unlock my house →"}

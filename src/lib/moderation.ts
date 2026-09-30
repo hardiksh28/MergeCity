@@ -29,3 +29,12 @@ export function isValidGithub(u: string) {
 export function isValidEmail(e: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
 }
+
+/** Checks the join form before a code is sent. Shared by the demo and live backends. */
+export function validateJoin(input: { email: string; github: string; handle: string }): string | null {
+  if (!isValidEmail(input.email.trim())) return "Enter a valid email.";
+  if (input.github && !isValidGithub(input.github.trim())) return "That GitHub username isn't valid.";
+  const h = cleanHandle(input.handle);
+  if (h && isBlockedName(h)) return "Pick a different name for your door.";
+  return null;
+}

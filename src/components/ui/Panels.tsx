@@ -303,9 +303,11 @@ function HousePanel() {
             Share…
           </button>
         </div>
-        <button className="mt-2 w-full rounded-lg border border-dashed border-amber/30 py-2 font-mono text-[11px] uppercase tracking-wider text-amber/80 hover:bg-amber/5" onClick={simulate}>
-          Demo: simulate a teammate verifying
-        </button>
+        {backend.demo && (
+          <button className="mt-2 w-full rounded-lg border border-dashed border-amber/30 py-2 font-mono text-[11px] uppercase tracking-wider text-amber/80 hover:bg-amber/5" onClick={simulate}>
+            Demo: simulate a teammate verifying
+          </button>
+        )}
       </section>
 
       {/* upgrades */}

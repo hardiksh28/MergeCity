@@ -2,25 +2,30 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { backend, money, rupees } from "@/lib/backend";
+import { backend, money, rupees, type AdminData } from "@/lib/backend";
 import { registryNo } from "@/components/ui/Deed";
 import { PLOTS_BY_ID, plotLabel } from "@/lib/city";
 import { isBlockedName } from "@/lib/moderation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Logo } from "@/components/ui/Logo";
 
-type Data = ReturnType<typeof backend.admin.all>;
-
 export default function Admin() {
-  const [data, setData] = useState<Data | null>(null);
+  const [data, setData] = useState<AdminData | null>(null);
+  const [error, setError] = useState("");
   const [q, setQ] = useState("");
   const [now] = useState(() => Date.now());
   const [filter, setFilter] = useState<"all" | "flagged" | "founder" | "real">("all");
 
   useEffect(() => {
-    const load = () => setData({ ...backend.admin.all() });
-    load();
-    return backend.subscribe(load);
+    const sync = () => {
+      const d = backend.admin.all();
+      setData(d && { ...d });
+      setError(backend.admin.error());
+    };
+    const unsub = backend.subscribe(sync);
+    // Live: wait for the session to load, then fetch through the admin API.
+    backend.whenReady().then(() => backend.admin.load()).then(sync);
+    return unsub;
   }, []);
 
   const rows = useMemo(() => {
@@ -32,7 +37,22 @@ export default function Admin() {
       .filter((r) => !s || r.handle.toLowerCase().includes(s) || r.email.includes(s) || (r.github ?? "").toLowerCase().includes(s));
   }, [data, q, filter]);
 
-  if (!data) return null;
+  const act = (p: void | Promise<void>) => Promise.resolve(p).catch((e: Error) => alert(e.message));
+
+  if (!data)
+    return (
+      <div className="grid h-full place-items-center p-6 text-center">
+        <div className="max-w-md">
+          <Logo />
+          <p className="mt-6 text-sm text-muted">{error || "Loading…"}</p>
+          {error && (
+            <Link href="/" className="btn btn-primary mt-5">
+              Go to the city and sign in
+            </Link>
+          )}
+        </div>
+      </div>
+    );
   const day = data.residents.filter((r) => now - r.joinedAt < 864e5).length;
   const inr = data.payments.filter((p) => p.currency === "INR").reduce((a, p) => a + p.amount, 0);
   const usd = data.payments.filter((p) => p.currency === "USD").reduce((a, p) => a + p.amount, 0);
@@ -56,7 +76,7 @@ export default function Admin() {
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Logo />
-            <span className="chip !text-amber">Admin · demo data</span>
+            <span className={`chip ${backend.demo ? "!text-amber" : "!text-lime"}`}>Admin · {backend.demo ? "demo data" : "live"}</span>
           </div>
           <div className="flex gap-2">
             <Link href="/" className="btn btn-ghost !py-2.5">← City</Link>
@@ -64,7 +84,9 @@ export default function Admin() {
           </div>
         </header>
         <p className="mt-3 text-sm text-muted">
-          Reads this browser&apos;s demo database. With Supabase connected this page should sit behind an admin role check.
+          {backend.demo
+            ? "Reads this browser's demo database. Set the Supabase keys to see real signups."
+            : "Live data from Supabase. Only the admin email can load this page."}
         </p>
 
         <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
@@ -103,10 +125,10 @@ export default function Admin() {
                     </span>
                     <span className="text-xs text-dim">{new Date(c.at).toLocaleString("en-IN")}</span>
                     <span className="ml-auto flex gap-2">
-                      <button className="chip !py-1 !text-lime hover:!border-lime" onClick={() => { try { backend.admin.approve(c.id); } catch (e) { alert((e as Error).message); } }}>
+                      <button className="chip !py-1 !text-lime hover:!border-lime" onClick={() => act(backend.admin.approve(c.id))}>
                         Approve
                       </button>
-                      <button className="chip !py-1 hover:!text-red" onClick={() => confirm(`Reject ${c.txnId}? The buyer sees "we couldn't find this payment".`) && backend.admin.reject(c.id)}>
+                      <button className="chip !py-1 hover:!text-red" onClick={() => confirm(`Reject ${c.txnId}? The buyer sees "we couldn't find this payment".`) && act(backend.admin.reject(c.id))}>
                         Reject
                       </button>
                     </span>
@@ -125,9 +147,11 @@ export default function Admin() {
                 {f}
               </button>
             ))}
-            <button className="chip ml-auto hover:!text-red" onClick={() => confirm("Reset the demo city? This wipes local demo data.") && backend.admin.reset()}>
-              Reset demo
-            </button>
+            {backend.demo && (
+              <button className="chip ml-auto hover:!text-red" onClick={() => confirm("Reset the demo city? This wipes local demo data.") && backend.admin.reset()}>
+                Reset demo
+              </button>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
@@ -147,6 +171,7 @@ export default function Admin() {
                         <div className="flex items-center gap-2">
                           <Avatar look={r.look} size={28} />
                           <span className={flagged ? "text-red" : ""}>{r.handle}</span>
+                          {r.hidden && <span className="chip !py-0 !text-[10px] !text-red">hidden</span>}
                           {r.github && <span className="text-xs text-dim">@{r.github}</span>}
                         </div>
                       </td>
@@ -157,10 +182,10 @@ export default function Admin() {
                       <td className="px-3 py-2">{r.referrals}</td>
                       <td className="px-3 py-2 text-xs text-muted">{new Date(r.joinedAt).toLocaleDateString("en-IN")}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-right">
-                        <button className="chip !py-1 hover:!text-ink" onClick={() => { const n = prompt("New door name", r.handle); if (n) backend.admin.rename(r.id, n); }}>
+                        <button className="chip !py-1 hover:!text-ink" onClick={() => { const n = prompt("New door name", r.handle); if (n) act(backend.admin.rename(r.id, n)); }}>
                           Rename
                         </button>{" "}
-                        <button className="chip !py-1 hover:!text-red" onClick={() => confirm(`Remove ${r.handle}'s house?`) && backend.admin.remove(r.id)}>
+                        <button className="chip !py-1 hover:!text-red" onClick={() => confirm(backend.demo ? `Remove ${r.handle}'s house?` : `Hide ${r.handle}'s house from the city?`) && act(backend.admin.remove(r.id))}>
                           Remove
                         </button>
                       </td>

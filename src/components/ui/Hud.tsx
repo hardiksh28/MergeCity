@@ -5,6 +5,8 @@ import { DISTRICT_META, HQ, PLOTS_BY_ID, districtAt } from "@/lib/city";
 import { interact, spawnAtHome } from "@/lib/interact";
 import { DISTRICT_LABELS, MAP, drawArrow, renderCityCanvas } from "@/lib/mapdraw";
 import { runtime, useCity } from "@/lib/store";
+import { backend } from "@/lib/backend";
+import { SITE } from "@/lib/site";
 import { Joystick } from "./Joystick";
 import { Logo } from "./Logo";
 import { BackButton } from "./BackButton";
@@ -97,9 +99,11 @@ export function Hud() {
             <button className="w-full rounded-lg px-3 py-2 text-left hover:bg-white/5" onClick={() => set({ launch: !launch })}>
               Preview launch day: <b>{launch ? "On" : "Off"}</b>
             </button>
-            <a className="block w-full rounded-lg px-3 py-2 text-left text-muted hover:bg-white/5" href="/admin">
-              Admin (demo)
-            </a>
+            {(backend.demo || me?.email === SITE.email) && (
+              <a className="block w-full rounded-lg px-3 py-2 text-left text-muted hover:bg-white/5" href="/admin">
+                Admin{backend.demo ? " (demo)" : ""}
+              </a>
+            )}
           </div>
         )}
       </div>
