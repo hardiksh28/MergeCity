@@ -77,6 +77,11 @@ create view public.public_residents with (security_invoker = false) as
 
 grant select on public.public_residents to anon, authenticated;
 grant select (id, name, tower_id, seats) on public.teams to anon, authenticated;
+-- Explicit grants, so this works with "Automatically expose new tables" turned OFF.
+-- RLS policies below still decide which rows each role can see.
+grant select on public.residents, public.plots to anon, authenticated;
+grant select on public.resident_private, public.payments to authenticated;
+grant all on all tables in schema public to service_role;
 
 alter table public.residents enable row level security;
 alter table public.resident_private enable row level security;
@@ -170,7 +175,11 @@ returns void language sql security definer set search_path = public as $$
   delete from teams where gateway_id = p_gateway_id;
 $$;
 
-revoke all on function public.grant_founder, public.grant_tower, public.release_tower from anon, authenticated;
+-- Postgres lets PUBLIC execute new functions by default; revoking only from
+-- anon/authenticated would leave that open. Payment grants are server-only.
+revoke all on function public.grant_founder, public.grant_tower, public.release_tower from public, anon, authenticated;
+grant execute on function public.grant_founder, public.grant_tower, public.release_tower to service_role;
+revoke all on function public.move_in from public, anon;
 grant execute on function public.move_in to authenticated;
 
 -- ------------------------------------------------------------ realtime
