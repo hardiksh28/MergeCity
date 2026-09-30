@@ -251,7 +251,7 @@ function HousePanel() {
           <span className="absolute -right-2.5 -top-2.5 h-5 w-5 rounded-full bg-[#0b1220]" />
           <div className="flex items-end justify-between">
             <div>
-              <div className="label !text-[10px]">Place in line</div>
+              <div className="label !text-[10px]">Waitlist spot</div>
               <div className="font-display text-4xl font-black neon-text" style={{ color: meta.color }}>
                 #{me.place}
               </div>

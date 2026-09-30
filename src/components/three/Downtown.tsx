@@ -219,7 +219,8 @@ function Registry() {
             <group key={k} rotation={[0, (k * Math.PI) / 2, 0]}>
               <Text font={FONT_DISPLAY} fontSize={4.2} position={[0, 0, 13]} anchorX="center" anchorY="middle" letterSpacing={0.1}>
                 MERGECITY
-                <meshBasicMaterial toneMapped={false} color={[1.6, 2.2, 2.8]} side={THREE.DoubleSide} />
+                {/* Front side only: double-sided, the neighbouring face's text showed through mirrored. */}
+                <meshBasicMaterial toneMapped={false} color={[1.6, 2.2, 2.8]} side={THREE.FrontSide} />
               </Text>
             </group>
           ))}

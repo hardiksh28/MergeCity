@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DISTRICT_META, PLOTS_BY_ID } from "@/lib/city";
+import { CITY, DISTRICT_META, PLOTS_BY_ID } from "@/lib/city";
+
+const MAIN_STREET_PLOTS = CITY.plots.filter((p) => p.district === "mainstreet").length;
 import { runtime, useCity } from "@/lib/store";
 import { Deed } from "./Deed";
 
@@ -35,7 +37,7 @@ export function MoveIn() {
         <div className="absolute inset-0 flex items-end justify-center p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-10">
           <div className="glass sheet-in pointer-events-auto w-full max-w-[460px] rounded-3xl p-6 text-center sm:p-8">
             <p className="label" style={{ color: meta.color }}>
-              Plot registered · #{me.place} in line
+              {meta.name} · #{me.place} on the waitlist
             </p>
             <h2 className="mt-3 font-display text-[1.7rem] font-black leading-tight tracking-tight sm:text-3xl">
               Welcome to MergeCity,
@@ -45,7 +47,7 @@ export function MoveIn() {
               </span>
             </h2>
             <p className="mt-3 text-sm text-muted">
-              This land is registered to you in {meta.name}. The green beacon marks it on the map. Every teammate who joins with your link adds a floor.
+              This land is registered to you. Plot numbers are addresses, not your place in the queue: Main Street (plots 1–{MAIN_STREET_PLOTS}) is kept for founding residents. The green beacon marks your house, and every teammate who joins with your link adds a floor.
             </p>
             <div className="mt-4">
               <Deed r={me} compact />

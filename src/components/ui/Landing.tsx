@@ -10,6 +10,8 @@ import { FOUNDER_PRICE, money } from "@/lib/backend";
 import { LegalFooter } from "@/components/legal/LegalPage";
 import { Founder } from "@/components/legal/Founder";
 
+const SHOW_COUNT_FROM = 25;
+
 export function Landing() {
   const residents = useCity((s) => s.residents);
   const me = useCity((s) => s.me);
@@ -22,6 +24,9 @@ export function Landing() {
 
   const [now] = useState(() => Date.now());
   const today = useMemo(() => residents.filter((r) => now - r.joinedAt < 864e5).length, [residents, now]);
+  // An almost-empty count reads as "nobody's here"; show it once the city has some life.
+  const showCount = residents.length >= SHOW_COUNT_FROM;
+  const count = `${residents.length.toLocaleString("en-IN")} ${residents.length === 1 ? "plot" : "plots"} registered`;
 
   const enter = () => {
     spawnAtHome();
@@ -33,9 +38,11 @@ export function Landing() {
       <header className="pointer-events-auto relative z-20 flex items-center justify-between gap-3 p-4 sm:p-6">
         {map2d && webgl ? <BackButton label="Back to 3D city" /> : <Logo />}
         <div className="flex items-center gap-2">
-          <span className="chip hidden sm:inline-flex">
-            <span className="live-dot" /> {residents.length.toLocaleString("en-IN")} plots registered
-          </span>
+          {showCount && (
+            <span className="chip hidden sm:inline-flex">
+              <span className="live-dot" /> {count}
+            </span>
+          )}
           {webgl && (
             <button className="chip hover:text-ink" onClick={() => set({ map2d: !map2d })}>
               {map2d ? "3D city" : "2D map"}
@@ -77,7 +84,7 @@ export function Landing() {
           </h1>
           <p className="rise mt-4 max-w-[520px] text-[15px] leading-relaxed text-muted sm:text-lg" style={{ animationDelay: "0.18s" }}>
             {me
-              ? `${plotLabel(PLOTS_BY_ID.get(me.plotId)!)} · #${me.place} in line · ${me.floors} floor${me.floors > 1 ? "s" : ""}.`
+              ? `${plotLabel(PLOTS_BY_ID.get(me.plotId)!)} · #${me.place} on the waitlist · ${me.floors} floor${me.floors > 1 ? "s" : ""}.`
               : "Join the MergeMate waitlist and a plot of land in MergeCity is registered in your name. Build your character, get your house, invite teammates to stack floors."}
           </p>
           <div className="rise mt-6 flex flex-wrap items-center gap-3" style={{ animationDelay: "0.26s" }}>
@@ -96,9 +103,11 @@ export function Landing() {
               </>
             )}
           </div>
-          <div className="rise mt-5 flex items-center gap-2 font-mono text-xs text-dim sm:hidden" style={{ animationDelay: "0.3s" }}>
-            <span className="live-dot" /> {residents.length.toLocaleString("en-IN")} plots registered · {today} today
-          </div>
+          {showCount && (
+            <div className="rise mt-5 flex items-center gap-2 font-mono text-xs text-dim sm:hidden" style={{ animationDelay: "0.3s" }}>
+              <span className="live-dot" /> {count} · {today} today
+            </div>
+          )}
           <div className="rise mt-5 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5" style={{ animationDelay: "0.34s" }}>
             <Founder compact />
             <LegalFooter compact />
