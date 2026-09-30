@@ -65,16 +65,18 @@ Use **Razorpay** (UPI for India) plus **PayPal** (cards for the US). Both accept
 2. **(you)** In Supabase, go to Authentication → SMTP Settings and enter Resend's SMTP details (`smtp.resend.com`, port 465, user `resend`, password = your API key).
 3. **(you)** In Supabase, go to Authentication → Email Templates → "Magic Link" and make the body show the code: `Your MergeCity door key: {{ .Token }}`.
 
-## 5. Legal pages every payment provider checks (you + code)
+## 5. Legal pages every payment provider checks (done, you: review)
 
-Public pages on your domain:
+These are built and linked from the home-screen footer, the join form and both checkouts:
 
-- **Terms & Conditions**
-- **Privacy Policy** (what you collect: email, optional GitHub username; that emails are never shown). US visitors mean you should also mention how people can request deletion.
-- **Refund & Cancellation Policy**. It must match the button text: "$2, credited to your first bill, refundable on request before launch." Subscriptions can be cancelled any time.
-- **Contact us** (email)
+- `/terms`: Terms & Conditions
+- `/privacy`: Privacy Policy
+- `/refunds`: Refund & Cancellation Policy (matches the "$2, credited to your first bill, refundable before launch" wording)
+- `/contact`: Contact us
 
-Ask a CA how income from a merchant of record is reported on your Indian taxes.
+Operator name, support email and website live in one file: `src/lib/site.ts`. **Set a real support email there before Dodo reviews the site.** Prices come from `src/lib/pricing.ts`, so the pages always match the app.
+
+These pages are a solid plain-language starting point, not legal advice. Have them reviewed if you can, and ask a CA how income from a merchant of record is reported on your Indian taxes.
 
 ## 6. Environment variables (you, in Vercel → Settings → Environment Variables)
 

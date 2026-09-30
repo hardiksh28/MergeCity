@@ -25,11 +25,8 @@ export const HEADWEAR: { id: Headwear; label: string }[] = [
   { id: "none", label: "Bald" },
 ];
 
-// Prices in US dollars. Charged in USD worldwide; the checkout can show a
-// local-currency equivalent (e.g. INR for UPI in India).
-export const FOUNDER_PRICE = 2;
-export const SEAT_PRICE = 5; // placeholder: set your real per-seat monthly price
-export const money = (n: number) => `$${n.toLocaleString("en-US")}`;
+import { FOUNDER_PRICE, SEAT_PRICE } from "./pricing";
+export { FOUNDER_PRICE, SEAT_PRICE, money } from "./pricing";
 
 interface Row extends PublicResident {
   email: string;

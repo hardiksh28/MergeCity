@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { HEADWEAR, OUTFITS, SKINS, backend } from "@/lib/backend";
 import { useCity } from "@/lib/store";
@@ -153,7 +154,11 @@ export function JoinFlow() {
               <button className="btn btn-primary mt-5 w-full" disabled={busy}>
                 {busy ? "Sending code…" : "Send my door key →"}
               </button>
-              <p className="mt-3 text-center text-[11px] text-dim">Free. No card. One email to verify, then launch news only.</p>
+              <p className="mt-3 text-center text-[11px] leading-relaxed text-dim">
+                Free. No card. One email to verify, then launch news only. By joining you agree to the{" "}
+                <Link href="/terms" target="_blank" className="underline hover:text-ink">Terms</Link> and{" "}
+                <Link href="/privacy" target="_blank" className="underline hover:text-ink">Privacy Policy</Link>.
+              </p>
             </form>
           ) : (
             <form onSubmit={verify}>

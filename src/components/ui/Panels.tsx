@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { FOUNDER_PRICE, SEAT_PRICE, backend, money } from "@/lib/backend";
 import { CITY, DISTRICT_META, MAX_FLOORS, PLOTS_BY_ID, TOWERS_BY_ID, plotLabel } from "@/lib/city";
@@ -582,6 +583,10 @@ function PayPanel() {
             Pay {money(FOUNDER_PRICE)}
           </button>
           <p className="mt-2 text-center text-[11px] text-dim">Cards worldwide · UPI in India · Secured by Dodo Payments</p>
+          <p className="mt-1 text-center text-[11px] text-dim">
+            By paying you agree to the <Link href="/terms" target="_blank" className="underline hover:text-ink">Terms</Link> and{" "}
+            <Link href="/refunds" target="_blank" className="underline hover:text-ink">Refund Policy</Link>.
+          </p>
         </>
       )}
       <p className="mt-4 rounded-lg border border-dashed border-amber/30 px-3 py-2 text-[11px] text-amber/80">
@@ -676,7 +681,11 @@ function TeamPanel({ towerId }: { towerId?: string }) {
             </span>
             <span className="font-display text-xl font-black">{money(seats * SEAT_PRICE)}/mo</span>
           </div>
-          <p className="text-xs text-muted">Billed monthly in USD by card, or UPI Autopay in India. Change seats or cancel any time.</p>
+          <p className="text-xs text-muted">
+            Billed monthly in USD by card, or UPI Autopay in India. Change seats or cancel any time. By subscribing you agree to the{" "}
+            <Link href="/terms" target="_blank" className="underline hover:text-ink">Terms</Link> and{" "}
+            <Link href="/refunds" target="_blank" className="underline hover:text-ink">Refund Policy</Link>.
+          </p>
           {err && <p className="text-sm text-red">{err}</p>}
           <button className="btn btn-primary w-full" disabled={busy || !name.trim()} onClick={claim}>
             {busy ? "Waiting for payment confirmation…" : `Subscribe · ${money(seats * SEAT_PRICE)}/mo`}

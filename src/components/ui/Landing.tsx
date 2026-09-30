@@ -7,6 +7,8 @@ import { PLOTS_BY_ID, plotLabel } from "@/lib/city";
 import { Logo } from "./Logo";
 import { BackButton } from "./BackButton";
 import { FOUNDER_PRICE, money } from "@/lib/backend";
+import { LegalFooter } from "@/components/legal/LegalPage";
+import { Founder } from "@/components/legal/Founder";
 
 export function Landing() {
   const residents = useCity((s) => s.residents);
@@ -96,6 +98,10 @@ export function Landing() {
           </div>
           <div className="rise mt-5 flex items-center gap-2 font-mono text-xs text-dim sm:hidden" style={{ animationDelay: "0.3s" }}>
             <span className="live-dot" /> {residents.length.toLocaleString("en-IN")} plots registered · {today} today
+          </div>
+          <div className="rise mt-5 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5" style={{ animationDelay: "0.34s" }}>
+            <Founder compact />
+            <LegalFooter compact />
           </div>
         </div>
 

@@ -264,3 +264,36 @@ body {
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
+
+/* Long-form text on the legal pages */
+.legal h2 {
+  margin-top: 2.25rem;
+  font-family: var(--font-orbitron);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.legal p,
+.legal li {
+  margin-top: 0.75rem;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #c3cddd;
+}
+.legal ul {
+  margin-top: 0.5rem;
+  padding-left: 1.2rem;
+  list-style: disc;
+}
+.legal li {
+  margin-top: 0.35rem;
+}
+.legal a {
+  color: var(--cyan);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.legal strong {
+  color: var(--ink);
+}
