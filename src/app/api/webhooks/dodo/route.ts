@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifyWebhook } from "@/lib/server/dodo";
-import { rpc, supabaseConfigured } from "@/lib/server/supabase";
+import { rpc, supabaseConfigured, userEmails } from "@/lib/server/supabase";
 
 // Dodo Payments -> MergeCity. The ONLY place upgrades are granted.
 // Subscribe the endpoint to: payment.succeeded, subscription.active,
@@ -14,6 +14,7 @@ interface Event {
     currency?: string;
     quantity?: number;
     metadata?: Record<string, string>;
+    customer?: { email?: string };
   };
 }
 
@@ -30,9 +31,13 @@ export async function POST(req: NextRequest) {
 
   try {
     // Metadata is set by our own server when the checkout is created, so it can be trusted.
-    if (event.type === "payment.succeeded" && meta.type === "founder" && meta.user_id && d.payment_id) {
+    // Founder upgrade. Normally identified by the metadata we attach at checkout; if that's
+    // ever missing (e.g. a payment link shared by hand), fall back to the buyer's email.
+    const isSubscription = !!d.subscription_id;
+    const userId = meta.user_id || (!isSubscription && meta.type !== "team" ? await userIdByEmail(d.customer?.email) : null);
+    if (event.type === "payment.succeeded" && !isSubscription && (meta.type === "founder" || !meta.type) && userId && d.payment_id) {
       await rpc("grant_founder", {
-        p_user_id: meta.user_id,
+        p_user_id: userId,
         p_gateway_id: d.payment_id, // idempotent: retries are ignored
         p_amount: (d.total_amount ?? 0) / 100,
         p_currency: d.currency ?? "USD",
@@ -55,4 +60,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "grant failed" }, { status: 500 }); // Dodo retries
   }
   return NextResponse.json({ ok: true });
+}
+
+async function userIdByEmail(email?: string) {
+  if (!email) return null;
+  const want = email.trim().toLowerCase();
+  for (const [id, e] of await userEmails()) if (e.toLowerCase() === want) return id;
+  return null;
 }

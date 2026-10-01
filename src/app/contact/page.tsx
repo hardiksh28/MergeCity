@@ -7,7 +7,7 @@ import { SITE } from "@/lib/site";
 export const metadata: Metadata = { title: `Contact · ${SITE.product}` };
 
 const TOPICS = [
-  { t: "Refunds & billing", d: `Refunds, a payment that hasn't shown up yet, team towers and cancellations.`, s: "Refund request" },
+  { t: "Refunds & billing", d: `Refunds for the ${SITE.founderPrice} upgrade, receipts, team towers and cancellations.`, s: "Refund request" },
   { t: "Your account", d: "Change the name on your door, delete your account, or get a copy of your data.", s: "Account request" },
   { t: "Report a house", d: "Offensive names, spam houses or anything that shouldn't be in the city.", s: "Report" },
   { t: "Anything else", d: "Questions about MergeMate, partnerships or feedback.", s: "Hello" },
@@ -55,7 +55,7 @@ export default function Contact() {
         Website: <a href={SITE.url}>{SITE.url.replace("https://", "")}</a>
       </p>
       <p>
-        Payments go to {SITE.operator} directly by UPI or PayPal. For payment questions, include your UPI reference number or PayPal transaction ID.
+        Payments are processed by Dodo Payments, our merchant of record. For payment questions you can also reply to your receipt email.
       </p>
       <p>
         See our <Link href="/terms">Terms</Link>, <Link href="/privacy">Privacy Policy</Link> and <Link href="/refunds">Refund Policy</Link>.

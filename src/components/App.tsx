@@ -4,6 +4,9 @@ import dynamic from "next/dynamic";
 import { Component, useEffect, useRef, type ReactNode } from "react";
 import { backend } from "@/lib/backend";
 import type { PublicResident } from "@/lib/types";
+import { FOUNDER_PRICE } from "@/lib/pricing";
+import { SITE } from "@/lib/site";
+import { track } from "@/lib/analytics";
 import { PLOTS_BY_ID, plotLabel } from "@/lib/city";
 import { interact } from "@/lib/interact";
 import { goBack, installBackButton } from "@/lib/nav";
@@ -46,6 +49,8 @@ function detect() {
   const veryWeak = mem <= 1 || cores <= 2;
   return { webgl, isTouch, quality: weak ? ("low" as const) : ("high" as const), suggest2d: !webgl || veryWeak };
 }
+
+let handledReturn = false; // the boot effect can run twice in development
 
 function refresh() {
   const { residents, teams } = backend.city();
@@ -94,6 +99,31 @@ export default function App() {
         });
       }
       backend.markSeen();
+      // Back from Dodo checkout: wait for the webhook to move the house.
+      if (q.get("paid") === "founder" && !handledReturn) {
+        handledReturn = true;
+        history.replaceState(null, "", location.pathname);
+        const st = useCity.getState();
+        if (backend.me()?.tier !== "free") return;
+        const status = q.get("status"); // Dodo appends status=succeeded|failed|cancelled…
+        if (status && !["succeeded", "processing"].includes(status)) {
+          st.toast("The payment didn't go through, so nothing was charged. You can try again from your house.", "info");
+          return;
+        }
+        st.toast("Payment received. Confirming with Dodo…", "info");
+        backend.awaitFounder().then((ok) => {
+          const me = backend.me();
+          if (ok && me) {
+            refresh();
+            track("purchase", { currency: "USD", value: FOUNDER_PRICE });
+            st.set({ camFocus: { plotId: me.plotId, at: Date.now() } });
+            st.arrive(me.plotId);
+            st.toast("Payment confirmed. Welcome to Main Street.", "gold");
+          } else {
+            st.toast(`Still confirming your payment. Refresh in a few minutes, or email ${SITE.email}.`, "info");
+          }
+        });
+      }
     });
     const onHide = () => document.visibilityState === "hidden" && backend.markSeen();
     document.addEventListener("visibilitychange", onHide);

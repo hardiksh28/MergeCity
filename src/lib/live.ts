@@ -9,8 +9,7 @@
 
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { cleanHandle, isValidEmail, normalizeGithub, validateJoin } from "./moderation";
-import { checkTxnId, type PayMethod } from "./pricing";
-import type { AdminData, Backend, PaymentClaim } from "./backend";
+import type { AdminData, Backend } from "./backend";
 import type { JoinInput, Look, Me, PublicResident, Team, Tier } from "./types";
 
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -36,17 +35,6 @@ interface ResidentRow {
   place: number;
   created_at: string;
 }
-interface ClaimRow {
-  id: string;
-  user_id: string;
-  method: PayMethod;
-  txn_id: string;
-  amount: number | string;
-  currency: "INR" | "USD";
-  status: PaymentClaim["status"];
-  created_at: string;
-}
-
 const toResident = (r: ResidentRow): PublicResident => ({
   id: r.id,
   handle: r.handle,
@@ -59,23 +47,11 @@ const toResident = (r: ResidentRow): PublicResident => ({
   place: Number(r.place),
 });
 
-const toClaim = (c: ClaimRow): PaymentClaim => ({
-  id: c.id,
-  userId: c.user_id,
-  method: c.method,
-  txnId: c.txn_id,
-  amount: Number(c.amount),
-  currency: c.currency,
-  status: c.status,
-  at: Date.parse(c.created_at),
-});
-
 // ----------------------------------------------------------------- state
 
 let residents: PublicResident[] = [];
 let teams: Team[] = [];
 let me: Me | null = null;
-let claim: PaymentClaim | null = null;
 let admin: AdminData | null = null;
 let adminError = "";
 let started = false;
@@ -104,24 +80,16 @@ async function loadCity() {
 async function loadMe(s: Session | null) {
   if (!s) {
     me = null;
-    claim = null;
     return;
   }
   const uid = s.user.id;
   const pub = residents.find((r) => r.id === uid);
   if (!pub) {
     me = null; // signed in but hasn't moved in yet (or hidden by an admin)
-    claim = null;
     return;
   }
-  const [priv, c] = await Promise.all([
-    sb().from("resident_private").select("ref_code").eq("user_id", uid).maybeSingle(),
-    sb().from("payment_claims").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-  ]);
+  const priv = await sb().from("resident_private").select("ref_code").eq("user_id", uid).maybeSingle();
   me = { ...pub, email: s.user.email ?? "", refCode: priv.data?.ref_code ?? "", referrals: Math.max(0, pub.floors - 1), lastSeen: readSeen(uid) };
-  const next = c.data ? toClaim(c.data as ClaimRow) : null;
-  // Keep the same object when nothing changed, so React doesn't re-render for nothing.
-  if (!claim || !next || claim.id !== next.id || claim.status !== next.status) claim = next;
 }
 
 async function refresh() {
@@ -156,8 +124,6 @@ function start() {
   sb().auth.onAuthStateChange((event) => {
     if (event === "SIGNED_IN" || event === "SIGNED_OUT") later(0);
   });
-  // A payment waiting for approval: check back now and then, and when the tab regains focus.
-  setInterval(() => claim?.status === "pending" && later(0), 20000);
   window.addEventListener("focus", () => later(0));
 }
 
@@ -235,7 +201,6 @@ export const live: Backend = {
 
   signOut() {
     me = null;
-    claim = null;
     admin = null;
     emit();
     void sb().auth.signOut();
@@ -245,16 +210,23 @@ export const live: Backend = {
     return null;
   },
 
-  myClaim: () => claim,
+  async payFounder() {
+    const s = await session();
+    if (!s) throw new Error("Sign in first.");
+    const res = await fetch("/api/pay/founder", { method: "POST", headers: { Authorization: `Bearer ${s.access_token}` } });
+    const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+    if (!res.ok || !body.url) throw new Error(body.error ?? "Couldn't start the checkout. Try again in a minute.");
+    return { url: body.url };
+  },
 
-  async submitPayment(method, rawTxnId) {
-    const bad = checkTxnId(method, rawTxnId);
-    if (bad) throw new Error(bad);
-    const { data, error } = await sb().rpc("submit_payment_claim", { p_method: method, p_txn_id: rawTxnId });
-    if (error) throw new Error(error.message);
-    claim = toClaim(data as ClaimRow);
-    emit();
-    return claim;
+  async awaitFounder() {
+    // Back from Dodo: the webhook usually lands within seconds. Check every 3s for 2 minutes.
+    for (let i = 0; i < 40; i++) {
+      await refresh();
+      if (me && me.tier !== "free") return true;
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+    return false;
   },
 
   arrival: () => null,
@@ -291,15 +263,6 @@ export const live: Backend = {
         adminError = (e as Error).message;
       }
       emit();
-    },
-    async approve(id) {
-      await adminFetch({ method: "POST", body: JSON.stringify({ action: "approve", id }) });
-      await live.admin.load();
-      later(0);
-    },
-    async reject(id) {
-      await adminFetch({ method: "POST", body: JSON.stringify({ action: "reject", id }) });
-      await live.admin.load();
     },
     async remove(id) {
       await adminFetch({ method: "POST", body: JSON.stringify({ action: "hide", id }) });

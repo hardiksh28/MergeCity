@@ -34,7 +34,7 @@ Everything in the user flow runs locally with **no backend**. A demo database li
 
 ### What the $2 means
 
-A **one-time payment (₹169 by UPI in India, $2 by PayPal elsewhere), credited off the first MergeMate bill, refundable on request before launch**. Buyers pay, then submit their UPI reference or PayPal transaction ID; you match it and approve it in `/admin`, which moves their house. Prices live in `src/lib/pricing.ts`.
+A **one-time payment of $2 USD through Dodo Payments (cards worldwide, UPI in India), credited off the first MergeMate bill, refundable on request before launch**. Dodo's webhook moves the house to Main Street automatically. Prices live in `src/lib/pricing.ts`.
 
 Team towers are requested by email for now. `SEAT_PRICE` in `src/lib/pricing.ts` is only shown as an estimate.
 
@@ -50,7 +50,7 @@ Team towers are requested by email for now. `SEAT_PRICE` in `src/lib/pricing.ts`
 
 ## Going live
 
-See **[docs/GO-LIVE.md](docs/GO-LIVE.md)** for the step-by-step guide: Supabase, email codes, manual UPI + PayPal payments, the legal pages payment providers require, env vars, and a launch checklist. `npm run db:plots` generates the plots seed SQL from the city layout.
+See **[docs/GO-LIVE.md](docs/GO-LIVE.md)** for the step-by-step guide: Supabase, email codes, Dodo Payments, the legal pages payment providers require, env vars, and a launch checklist. `npm run db:plots` generates the plots seed SQL from the city layout.
 
 ## Map of the code
 
@@ -61,6 +61,6 @@ src/lib/physics.ts         collisions + camera ray
 src/lib/store.ts           app state (zustand) + per-frame runtime
 src/components/three/*     the 3D city
 src/components/ui/*        landing, join, HUD, panels, 2D map
-src/app/api/*              Dodo Payments checkout + webhook (optional, unused for now)
+src/app/api/*              Dodo checkout + webhook, admin API, GitHub gardens
 supabase/schema.sql        production schema
 ```

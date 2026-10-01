@@ -11,42 +11,30 @@ Steps marked **(you)** need your accounts, documents or decisions. Steps marked 
 | Service | Why | Cost to start |
 | --- | --- | --- |
 | [Supabase](https://supabase.com) | Database, email-code login, realtime | Free tier |
-| UPI (your bank app) + [PayPal](https://paypal.com) | ₹169 in India, $2 elsewhere, approved by hand in `/admin` | UPI free; PayPal takes a fee |
+| [Dodo Payments](https://dodopayments.com) | $2 upgrade: cards worldwide, UPI in India; merchant of record | A percentage per sale |
 | [Resend](https://resend.com) | Sending the 6-digit codes and "you gained a floor" emails | Free up to 3,000/month |
 | A domain, e.g. `mergecity.dev` | Referral links, email sending, payment provider approval | About $10–20/year |
 | Vercel (already connected) | Hosting | Free tier |
 
-## 2. Payments: manual UPI + PayPal (current)
+## 2. Payments: Dodo Payments
 
-No payment gateway and no business registration needed. The buyer pays you directly and tells the site their transaction ID; you check it and approve it.
+Dodo is the merchant of record: it takes cards worldwide and UPI in India, handles sales tax/VAT/GST, issues receipts and refunds, and pays out to your Indian bank.
 
-| Buyer | Pays | How |
-| --- | --- | --- |
-| India | **₹169** | Scans a UPI QR (amount and note `MergeCity MC-000123` filled in), then enters the 12-digit UTR |
-| Everywhere else | **$2** | Pays on your `paypal.me` link with the same note, then enters the 17-character PayPal transaction ID |
+**Flow:** Pay $2 → `/api/pay/founder` creates a Dodo checkout for the signed-in user → buyer pays on Dodo → Dodo sends `payment.succeeded` to `/api/webhooks/dodo` → the webhook verifies the signature and calls `grant_founder` → the house moves to Main Street. The buyer is sent back to `/?paid=founder`, where the site shows "Confirming…" until the upgrade lands. Upgrades are never granted from the browser.
 
-**Your routine:** open `/admin` → "Payments to check". Match the ID and amount against your bank app / PayPal, then press **Approve** (house moves to Main Street) or **Reject** (buyer sees "we couldn't find this payment").
+### Set up Dodo (you), in **Live** mode
 
-### Set it up (you)
+1. **Products → Create product**: "Founding Resident", **one-time**, **$2.00 USD**. Copy its product ID.
+2. **Developer → API Keys**: create a key.
+3. **Developer → Webhooks → Add endpoint**: `https://merge-city.vercel.app/api/webhooks/dodo`, event **`payment.succeeded`** (add `subscription.*` later if you sell towers by subscription). Copy the signing secret (`whsec_…`).
+4. **Vercel → Environment Variables** (Production), then redeploy:
+   - `DODO_ENV` = `live` (Config)
+   - `DODO_API_KEY` (Secret)
+   - `DODO_WEBHOOK_SECRET` (Secret)
+   - `DODO_FOUNDER_PRODUCT_ID` (Config)
+5. Test: buy it once with your own card, check the house moves and the payment shows in `/admin`, then refund yourself from the Dodo dashboard.
 
-1. In Vercel → Environment Variables add:
-   - `NEXT_PUBLIC_UPI_ID`: your UPI ID, e.g. `name@okaxis`
-   - `NEXT_PUBLIC_UPI_NAME`: the name the payer's app shows
-   - `NEXT_PUBLIC_PAYPAL_ME`: your PayPal.me username (create one at paypal.me)
-
-   Redeploy. Until a value is set, that option shows "email us" instead.
-2. PayPal India: complete your KYC (PAN) and set the purpose code for incoming payments, or PayPal will hold them. PayPal keeps a fee (roughly 4–5% plus a fixed fee, plus conversion) and pays out to your Indian bank.
-3. Taxes: without a merchant of record, you are the seller. Keep a record of the payments and ask a CA how to report them.
-
-### Safety
-
-- Nothing is granted from the browser. `submit_payment_claim` only records the ID; `approve_payment_claim` (server-only) grants the upgrade.
-- The same transaction ID can't be claimed twice, and each person can have only one claim waiting.
-- Team towers are requested by email and set up by hand.
-
-### Later: Dodo Payments (optional)
-
-The Dodo checkout + webhook code is still in `src/app/api/` and `src/lib/server/dodo.ts`. If you want automatic card payments later, finish Dodo verification and set the `DODO_*` variables; the old steps are in git history.
+Team towers are still requested by email; `/api/pay/team` (subscription checkout) is ready if you add a seat product and `DODO_SEAT_PRODUCT_ID`.
 
 ## 3. Database: Supabase
 
@@ -82,9 +70,10 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_UPI_ID=
-NEXT_PUBLIC_UPI_NAME=
-NEXT_PUBLIC_PAYPAL_ME=
+DODO_ENV=live
+DODO_API_KEY=
+DODO_WEBHOOK_SECRET=
+DODO_FOUNDER_PRODUCT_ID=
 ```
 
 ## 7. Code changes once the keys exist (code)
@@ -94,8 +83,8 @@ NEXT_PUBLIC_PAYPAL_ME=
    - `verifyAndJoin` → `supabase.auth.verifyOtp({ email, token, type: "email" })`, then `supabase.rpc("move_in", { p_handle, p_github, p_look, p_ref })`
    - `city()` → `select` from `public_residents` and `teams`, plus a Realtime channel on `residents` so new houses appear live
    - `me()` → the signed-in user's row
-2. `submitPayment()` → `supabase.rpc("submit_payment_claim", { p_method, p_txn_id })`; `myClaim()` → select from `payment_claims`.
-3. `/admin` approve/reject → a server route (admin check) calling `approve_payment_claim` / `reject_payment_claim` with the service-role key.
+2. Done: `payFounder()` calls `/api/pay/founder` and redirects to Dodo.
+3. Done: `/admin` is served by `/api/admin` behind an email check.
 4. Remove the demo-only parts: the "Demo inbox" code, "Demo: simulate a teammate", simulated arrivals, `catchUp`, and the demo payment notes.
 5. Protect `/admin` behind an admin check, e.g. an `admins` table plus a server-side check. Make the CSV export a server route.
 6. Optional: add [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) on the join form if bots show up.
@@ -105,8 +94,8 @@ NEXT_PUBLIC_PAYPAL_ME=
 
 - [ ] Sign up end to end on a real phone with a real inbox
 - [ ] A referral link adds a floor only after the friend verifies
-- [ ] A real ₹169 UPI payment → submit UTR → approve in /admin → house moves to Main Street
-- [ ] A $2 PayPal payment works the same way
-- [ ] Submitting the same transaction ID twice is refused
+- [ ] A real $2 payment moves the house to Main Street within a minute
+- [ ] Resending the webhook from the Dodo dashboard doesn't double-grant
+- [ ] A cancelled checkout shows "nothing was charged"
 - [ ] The site works on a budget Android phone (3D in battery-saver mode, or the 2D map)
 - [ ] The privacy, terms, refund and contact pages are live and linked in the footer

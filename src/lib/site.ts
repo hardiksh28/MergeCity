@@ -1,4 +1,4 @@
-import { FOUNDER_PRICE, FOUNDER_PRICE_INR, SEAT_PRICE } from "./pricing";
+import { FOUNDER_PRICE, SEAT_PRICE } from "./pricing";
 
 /** Who runs the site. Used by the legal pages and the footer. */
 export const SITE = {
@@ -20,7 +20,6 @@ export const SITE = {
   },
   updated: "30 September 2026",
   founderPrice: `$${FOUNDER_PRICE}`,
-  founderPriceInr: `₹${FOUNDER_PRICE_INR}`,
   seatPrice: `$${SEAT_PRICE}`,
   refundDays: 7,
 };

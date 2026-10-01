@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { backend, money, rupees, type AdminData } from "@/lib/backend";
+import { backend, type AdminData } from "@/lib/backend";
 import { registryNo } from "@/components/ui/Deed";
 import { PLOTS_BY_ID, plotLabel } from "@/lib/city";
 import { isBlockedName } from "@/lib/moderation";
@@ -54,9 +54,11 @@ export default function Admin() {
       </div>
     );
   const day = data.residents.filter((r) => now - r.joinedAt < 864e5).length;
-  const inr = data.payments.filter((p) => p.currency === "INR").reduce((a, p) => a + p.amount, 0);
-  const usd = data.payments.filter((p) => p.currency === "USD").reduce((a, p) => a + p.amount, 0);
-  const pending = data.claims.filter((c) => c.status === "pending");
+  // Dodo can charge in the buyer's currency, so revenue is summed per currency.
+  const byCurrency = new Map<string, number>();
+  data.payments.forEach((p) => byCurrency.set(p.currency, (byCurrency.get(p.currency) ?? 0) + p.amount));
+  const revenue = [...byCurrency].map(([c, n]) => fmtMoney(n, c)).join(" + ") || "$0";
+  const recent = [...data.payments].sort((a, b) => b.at - a.at).slice(0, 50);
   const byId = new Map(data.residents.map((r) => [r.id, r]));
 
   const exportCsv = () => {
@@ -95,7 +97,7 @@ export default function Admin() {
             ["Last 24h", day],
             ["Referrals", data.referrals.length],
             ["Payments", data.payments.length],
-            ["Revenue", `${rupees(inr)} + ${money(usd)}`],
+            ["Revenue", revenue],
           ].map(([k, v]) => (
             <div key={k} className="glass rounded-2xl p-4">
               <div className="label">{k}</div>
@@ -106,32 +108,21 @@ export default function Admin() {
 
         <section className="glass mt-6 rounded-2xl p-4">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-lg font-bold">Payments to check {pending.length > 0 && <span className="chip ml-2 !py-0.5 !text-amber">{pending.length}</span>}</h2>
-            <span className="text-xs text-dim">Match the ID and amount against your bank / PayPal, then approve.</span>
+            <h2 className="font-display text-lg font-bold">Recent payments</h2>
+            <span className="text-xs text-dim">Confirmed by Dodo Payments. Refunds are issued from the Dodo dashboard.</span>
           </div>
-          {pending.length === 0 ? (
-            <p className="mt-3 text-sm text-muted">Nothing waiting.</p>
+          {recent.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">No payments yet.</p>
           ) : (
             <ul className="mt-3 divide-y divide-line/60 rounded-xl border border-line">
-              {pending.map((c) => {
-                const r = byId.get(c.userId);
+              {recent.map((p) => {
+                const r = byId.get(p.userId);
                 return (
-                  <li key={c.id} className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm">
-                    <span className="chip !py-0.5">{c.method === "upi" ? "UPI" : "PayPal"}</span>
-                    <b>{c.currency === "INR" ? rupees(c.amount) : money(c.amount)}</b>
-                    <code className="font-mono text-cyan">{c.txnId}</code>
-                    <span className="text-muted">
-                      {r ? `${r.handle} · ${r.email} · ${registryNo(r.place)}` : "deleted resident"}
-                    </span>
-                    <span className="text-xs text-dim">{new Date(c.at).toLocaleString("en-IN")}</span>
-                    <span className="ml-auto flex gap-2">
-                      <button className="chip !py-1 !text-lime hover:!border-lime" onClick={() => act(backend.admin.approve(c.id))}>
-                        Approve
-                      </button>
-                      <button className="chip !py-1 hover:!text-red" onClick={() => confirm(`Reject ${c.txnId}? The buyer sees "we couldn't find this payment".`) && act(backend.admin.reject(c.id))}>
-                        Reject
-                      </button>
-                    </span>
+                  <li key={p.gatewayId} className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm">
+                    <b>{fmtMoney(p.amount, p.currency)}</b>
+                    <code className="font-mono text-xs text-cyan">{p.gatewayId}</code>
+                    <span className="text-muted">{r ? `${r.handle} · ${r.email} · ${registryNo(r.place)}` : "deleted resident"}</span>
+                    <span className="ml-auto text-xs text-dim">{new Date(p.at).toLocaleString("en-IN")}</span>
                   </li>
                 );
               })}
@@ -199,4 +190,12 @@ export default function Admin() {
       </div>
     </div>
   );
+}
+
+function fmtMoney(n: number, currency: string) {
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
+  } catch {
+    return `${n} ${currency}`;
+  }
 }

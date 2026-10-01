@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
-import QRCode from "qrcode";
-import { FOUNDER_PRICE, FOUNDER_PRICE_INR, SEAT_PRICE, backend, money, rupees } from "@/lib/backend";
-import { PAY_TO, type PayMethod } from "@/lib/pricing";
+import { useMemo, useState, type ReactNode } from "react";
+import { FOUNDER_PRICE, SEAT_PRICE, backend, money } from "@/lib/backend";
 import { SITE } from "@/lib/site";
 import { track } from "@/lib/analytics";
 import { CITY, DISTRICT_META, MAX_FLOORS, PLOTS_BY_ID, TOWERS_BY_ID, plotLabel } from "@/lib/city";
@@ -185,7 +183,6 @@ function HousePanel() {
   const set = useCity((s) => s.set);
   const toast = useCity((s) => s.toast);
   const teams = useCity((s) => s.teams);
-  const claim = useSyncExternalStore(backend.subscribe, backend.myClaim, () => null);
   const [copied, setCopied] = useState(false);
   const origin = typeof window === "undefined" ? "" : location.origin;
 
@@ -327,10 +324,10 @@ function HousePanel() {
               <span className="font-display text-2xl font-black text-blue">{money(FOUNDER_PRICE)}</span>
             </div>
             <p className="mt-3 rounded-lg bg-black/30 px-3 py-2 text-xs leading-relaxed text-ink/80">
-              <b>What the {money(FOUNDER_PRICE)} is:</b> a one-time payment ({rupees(FOUNDER_PRICE_INR)} by UPI in India, {money(FOUNDER_PRICE)} by PayPal elsewhere), credited as {money(FOUNDER_PRICE)} off your first MergeMate bill. Refundable on request any time before launch. Not a subscription.
+              <b>What the {money(FOUNDER_PRICE)} is:</b> a one-time payment (card worldwide, UPI in India), credited as {money(FOUNDER_PRICE)} off your first MergeMate bill. Refundable on request any time before launch. Not a subscription.
             </p>
             <button className="btn btn-primary mt-3 w-full" onClick={() => set({ panel: { type: "pay" } })}>
-              {claim?.status === "pending" ? "Payment being checked…" : `Pay ${money(FOUNDER_PRICE)}`}
+              Pay {money(FOUNDER_PRICE)}
             </button>
           </div>
         ) : (
@@ -520,173 +517,80 @@ function RegistryPanel() {
   );
 }
 
-/** Manual checkout: pay by UPI QR (India) or PayPal (elsewhere), then submit the transaction ID for a hand check. */
+/** Founding resident: Dodo Payments hosted checkout. The house moves when Dodo's webhook confirms. */
 function PayPanel() {
   const me = useCity((s) => s.me);
   const set = useCity((s) => s.set);
-  const claim = useSyncExternalStore(backend.subscribe, backend.myClaim, () => null);
-  const [method, setMethod] = useState<PayMethod>(() => (/Kolkata|Calcutta/.test(Intl.DateTimeFormat().resolvedOptions().timeZone) ? "upi" : "paypal"));
-  const [txn, setTxn] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
   if (!me) return null;
-  const ref = registryNo(me.place);
 
-  if (me.tier !== "free" || claim?.status === "approved")
+  if (me.tier !== "free")
     return (
       <div className="text-center">
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-amber/60 bg-amber/15 text-3xl text-amber">⚑</div>
         <h3 className="mt-4 font-display text-2xl font-black">You&apos;re a founding resident</h3>
         <p className="mt-2 text-sm text-muted">Your house is on {plotLabel(PLOTS_BY_ID.get(me.plotId)!)}. Lights on, flag up.</p>
-        {claim && <p className="mt-3 text-xs text-dim">Payment {claim.txnId} · {claim.currency === "INR" ? rupees(claim.amount) : money(claim.amount)} credited to your first MergeMate bill.</p>}
-        <button className="btn btn-gold mt-6 w-full" onClick={() => { set({ panel: null, camFocus: { plotId: me.plotId, at: Date.now() } }); }}>
+        <p className="mt-3 text-xs text-dim">{money(FOUNDER_PRICE)} credited to your first MergeMate bill. Your receipt is in your email.</p>
+        <button className="btn btn-gold mt-6 w-full" onClick={() => set({ panel: null, camFocus: { plotId: me.plotId, at: Date.now() } })}>
           Walk to my house
         </button>
       </div>
     );
 
-  if (claim?.status === "pending")
-    return (
-      <div>
-        <p className="label !text-blue">Founding resident</p>
-        <h3 className="mt-2 font-display text-2xl font-black">Checking your payment</h3>
-        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-cyan/30 bg-cyan/5 p-4">
-          <span className="live-dot shrink-0" />
-          <p className="text-sm text-ink/90">We match every payment by hand, usually within 24 hours. Your house moves to Main Street as soon as it&apos;s confirmed. You don&apos;t need to do anything else.</p>
-        </div>
-        <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
-          <Stat k="Paid by" v={claim.method === "upi" ? "UPI" : "PayPal"} />
-          <Stat k="Amount" v={claim.currency === "INR" ? rupees(claim.amount) : money(claim.amount)} />
-        </dl>
-        <p className="mt-3 font-mono text-xs text-dim">Transaction {claim.txnId}</p>
-        <p className="mt-4 text-xs text-muted">
-          Something wrong? Email <a className="underline hover:text-ink" href={`mailto:${SITE.email}?subject=${encodeURIComponent(`Payment ${claim.txnId} (${ref})`)}`}>{SITE.email}</a> with your transaction ID.
-        </p>
-      </div>
-    );
-
-  const ready = method === "upi" ? !!PAY_TO.upiId : !!PAY_TO.paypalMe;
-  const submit = async () => {
+  const pay = async () => {
     setBusy(true);
     setErr("");
+    track("begin_checkout", { currency: "USD", value: FOUNDER_PRICE });
     try {
-      await backend.submitPayment(method, txn);
-      track("payment_submitted", { method, currency: method === "upi" ? "INR" : "USD", value: method === "upi" ? FOUNDER_PRICE_INR : FOUNDER_PRICE });
-      useCity.getState().toast("Payment submitted. We'll confirm it within 24 hours.", "good");
+      const r = await backend.payFounder();
+      if (r.url) {
+        location.href = r.url; // Dodo's hosted checkout; it sends the buyer back to /?paid=founder
+        return;
+      }
+      if (r.me) {
+        const { residents, teams } = backend.city();
+        set({ me: r.me, residents, teams, camFocus: { plotId: r.me.plotId, at: Date.now() } });
+        useCity.getState().arrive(r.me.plotId);
+        useCity.getState().toast("Payment confirmed. Welcome to Main Street.", "gold");
+      }
     } catch (e) {
       setErr((e as Error).message);
-    } finally {
-      setBusy(false);
     }
+    setBusy(false);
   };
 
   return (
     <div>
       <p className="label !text-blue">Founding resident</p>
       <h3 className="mt-2 font-display text-2xl font-black">Move to Main Street</h3>
-      <p className="mt-2 text-sm text-muted">One-time. Lights on, a founding-resident flag and a Main Street address. Credited to your first MergeMate bill, refundable before launch.</p>
-
-      {claim?.status === "rejected" && (
-        <p className="mt-4 rounded-xl border border-red/40 bg-red/10 p-3 text-xs text-ink/90">
-          We couldn&apos;t find a payment for <b className="font-mono">{claim.txnId}</b>. Check the ID and submit again, or email {SITE.email}.
-        </p>
-      )}
-
-      <div className="mt-4 grid grid-cols-2 gap-1 rounded-xl border border-line bg-black/30 p-1">
-        {([["upi", "India · UPI", rupees(FOUNDER_PRICE_INR)], ["paypal", "Outside India · PayPal", money(FOUNDER_PRICE)]] as const).map(([m, label, price]) => (
-          <button key={m} onClick={() => { setMethod(m); setErr(""); }} className={`rounded-lg px-2 py-2 text-left transition ${method === m ? "bg-white/10 text-ink" : "text-muted hover:text-ink"}`}>
-            <span className="block text-[11px] uppercase tracking-wider">{label}</span>
-            <span className="font-display text-lg font-black">{price}</span>
-          </button>
-        ))}
+      <div className="mt-4 flex items-center justify-between rounded-2xl border border-line bg-white/[0.02] p-4">
+        <div>
+          <div className="text-sm text-muted">One-time</div>
+          <div className="font-display text-4xl font-black">{money(FOUNDER_PRICE)}</div>
+        </div>
+        <ul className="space-y-1 text-right text-xs text-muted">
+          <li>✓ Main Street address</li>
+          <li>✓ Lights on</li>
+          <li>✓ Founding-resident flag</li>
+        </ul>
       </div>
-
-      {!ready ? (
-        <p className="mt-4 rounded-xl border border-line p-4 text-sm text-muted">
-          {method === "upi" ? "UPI" : "PayPal"} payments open soon. Email <a className="underline" href={`mailto:${SITE.email}?subject=${encodeURIComponent("Founding resident " + ref)}`}>{SITE.email}</a> and we&apos;ll send you the details.
-        </p>
-      ) : (
-        <>
-          <p className="label mt-5">Step 1 · Pay</p>
-          {method === "upi" ? <UpiPay reference={ref} /> : <PayPalPay reference={ref} />}
-
-          <p className="label mt-5">Step 2 · Tell us it&apos;s paid</p>
-          <input
-            className="field mt-2 font-mono"
-            inputMode={method === "upi" ? "numeric" : "text"}
-            placeholder={method === "upi" ? "12-digit UPI reference (UTR)" : "17-character PayPal transaction ID"}
-            value={txn}
-            onChange={(e) => setTxn(e.target.value)}
-          />
-          {err && <p className="mt-2 text-sm text-red">{err}</p>}
-          <button className="btn btn-primary mt-3 w-full" disabled={busy || !txn.trim()} onClick={submit}>
-            {busy ? "Submitting…" : "Submit payment"}
-          </button>
-          <p className="mt-2 text-center text-[11px] text-dim">
-            Your house moves once we&apos;ve matched the payment, usually within 24 hours. By paying you agree to the{" "}
-            <Link href="/terms" target="_blank" className="underline hover:text-ink">Terms</Link> and{" "}
-            <Link href="/refunds" target="_blank" className="underline hover:text-ink">Refund Policy</Link>.
-          </p>
-        </>
-      )}
-    </div>
-  );
-}
-
-function CopyRow({ label, value }: { label: string; value: string }) {
-  const [done, setDone] = useState(false);
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-line bg-black/30 py-1 pl-3 pr-1">
-      <span className="text-[11px] uppercase tracking-wider text-dim">{label}</span>
-      <code className="min-w-0 flex-1 truncate font-mono text-[13px] text-cyan">{value}</code>
-      <button
-        className="btn btn-ghost !px-2.5 !py-1.5 !text-[10px]"
-        onClick={() => navigator.clipboard?.writeText(value).then(() => { setDone(true); setTimeout(() => setDone(false), 1500); })}
-      >
-        {done ? "Copied ✓" : "Copy"}
+      <div className="mt-3 rounded-xl border border-line bg-black/30 p-3 text-xs leading-relaxed text-ink/85">
+        <b>Plainly:</b> you pay {money(FOUNDER_PRICE)} once. It becomes a {money(FOUNDER_PRICE)} credit on your first MergeMate bill. If you change your mind before launch, email us and we refund it. Nothing recurring.
+      </div>
+      {err && <p className="mt-4 text-sm text-red">{err}</p>}
+      <button className="btn btn-primary mt-5 w-full" disabled={busy} onClick={pay}>
+        {busy ? (backend.demo ? "Confirming payment…" : "Opening secure checkout…") : `Pay ${money(FOUNDER_PRICE)}`}
       </button>
-    </div>
-  );
-}
-
-function UpiPay({ reference }: { reference: string }) {
-  const isTouch = useCity((s) => s.isTouch);
-  const uri = `upi://pay?${new URLSearchParams({ pa: PAY_TO.upiId, pn: PAY_TO.upiName, am: FOUNDER_PRICE_INR.toFixed(2), cu: "INR", tn: `MergeCity ${reference}` })}`;
-  const [svg, setSvg] = useState("");
-  useEffect(() => {
-    let live = true;
-    QRCode.toString(uri, { type: "svg", margin: 1, errorCorrectionLevel: "M" }).then((s) => live && setSvg(s));
-    return () => { live = false; };
-  }, [uri]);
-  return (
-    <div className="mt-2 space-y-2">
-      <div className="flex items-center gap-4 rounded-2xl border border-line bg-white/[0.02] p-3">
-        <div className="h-32 w-32 shrink-0 rounded-lg bg-white p-1.5 [&>svg]:h-full [&>svg]:w-full" aria-label="UPI QR code" dangerouslySetInnerHTML={{ __html: svg }} />
-        <p className="text-xs leading-relaxed text-muted">
-          Scan with GPay, PhonePe, Paytm or any UPI app. It fills in <b className="text-ink">{rupees(FOUNDER_PRICE_INR)}</b> and the note <b className="text-ink">MergeCity {reference}</b>.
-        </p>
-      </div>
-      {isTouch && (
-        <a className="btn btn-ghost w-full" href={uri}>
-          Open my UPI app
-        </a>
-      )}
-      <CopyRow label="UPI ID" value={PAY_TO.upiId} />
-    </div>
-  );
-}
-
-function PayPalPay({ reference }: { reference: string }) {
-  return (
-    <div className="mt-2 space-y-2">
-      <a className="btn btn-ghost w-full" href={`https://paypal.me/${encodeURIComponent(PAY_TO.paypalMe)}/${FOUNDER_PRICE}USD`} target="_blank" rel="noopener noreferrer">
-        Pay {money(FOUNDER_PRICE)} on PayPal ↗
-      </a>
-      <p className="text-xs leading-relaxed text-muted">
-        Send <b className="text-ink">{money(FOUNDER_PRICE)} USD</b> and add <b className="text-ink">MergeCity {reference}</b> as the note. Card or PayPal balance both work. The transaction ID is in PayPal&apos;s receipt email.
+      <p className="mt-2 text-center text-[11px] text-dim">Cards worldwide · UPI in India · Secure checkout by Dodo Payments</p>
+      <p className="mt-1 text-center text-[11px] text-dim">
+        By paying you agree to the <Link href="/terms" target="_blank" className="underline hover:text-ink">Terms</Link> and{" "}
+        <Link href="/refunds" target="_blank" className="underline hover:text-ink">Refund Policy</Link>.
       </p>
-      <CopyRow label="Note" value={`MergeCity ${reference}`} />
+      {backend.demo && (
+        <p className="mt-4 rounded-lg border border-dashed border-amber/30 px-3 py-2 text-[11px] text-amber/80">Demo mode: no money moves.</p>
+      )}
     </div>
   );
 }
@@ -751,7 +655,7 @@ function TeamPanel({ towerId }: { towerId?: string }) {
             <span className="font-display text-xl font-black">{money(seats * SEAT_PRICE)}/mo</span>
           </div>
           <p className="text-xs text-muted">
-            Team towers are set up by hand while we&apos;re in early access. Send the request and we&apos;ll reply with payment details (UPI or PayPal) within a day. Nothing is charged until you confirm. See the{" "}
+            Team towers are set up by hand while we&apos;re in early access. Send the request and we&apos;ll reply with a secure payment link within a day. Nothing is charged until you confirm. See the{" "}
             <Link href="/terms" target="_blank" className="underline hover:text-ink">Terms</Link>.
           </p>
           <a className={`btn btn-primary w-full ${name.trim() ? "" : "pointer-events-none opacity-50"}`} href={request} aria-disabled={!name.trim()}>

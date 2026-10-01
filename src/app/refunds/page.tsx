@@ -10,11 +10,11 @@ export default function Refunds() {
   return (
     <LegalPage
       title="Refund & Cancellation Policy"
-      intro={`Short version: the founding-resident upgrade (${SITE.founderPriceInr} or ${SITE.founderPrice}) is refundable on request any time before ${SITE.brand} launches. Team towers can be cancelled any time.`}
+      intro={`Short version: the ${SITE.founderPrice} founding-resident upgrade is refundable on request any time before ${SITE.brand} launches. Team towers can be cancelled any time.`}
     >
-      <h2>1. The founding-resident upgrade</h2>
+      <h2>1. The {SITE.founderPrice} founding-resident upgrade</h2>
       <p>
-        This is a <strong>one-time payment of {SITE.founderPriceInr} by UPI, or {SITE.founderPrice} USD by PayPal</strong>. It moves your house to Main Street in {SITE.product}, turns its lights on and adds a founding-resident flag. It is not a subscription and is never charged again.
+        This is a <strong>one-time payment of {SITE.founderPrice} USD</strong>. It moves your house to Main Street in {SITE.product}, turns its lights on and adds a founding-resident flag. It is not a subscription and is never charged again.
       </p>
       <ul>
         <li>
@@ -41,20 +41,20 @@ export default function Refunds() {
 
       <h2>3. How to ask for a refund</h2>
       <p>
-        Email <a href={mail}>{SITE.email}</a> from the address you signed up with. Include your UPI reference number or PayPal transaction ID. We reply within 3 business days.
+        Email <a href={mail}>{SITE.email}</a> from the address you signed up with. Include the receipt number or the date of the payment. We reply within 3 business days.
       </p>
       <p>
-        Approved refunds go back the way you paid: UPI payments are refunded by UPI to the account that paid, PayPal payments are refunded through PayPal. We send refunds within 5 business days of approving them.
+        Approved refunds go back to the original payment method (card or UPI). Payments are processed by <strong>Dodo Payments</strong>, our merchant of record, which issues the refund. Your bank usually shows it within 5–10 business days.
       </p>
 
       <h2>4. Delivery</h2>
       <p>
-        Everything we sell is digital. The founding-resident upgrade and team towers are delivered in {SITE.product} once we have matched your payment, usually within 24 hours. Nothing is shipped.
+        Everything we sell is digital. The founding-resident upgrade and team towers are delivered in {SITE.product} as soon as the payment is confirmed, usually within a minute. Nothing is shipped.
       </p>
 
       <h2>5. Chargebacks</h2>
       <p>
-        Please email us before disputing a payment with your bank or PayPal. We will sort it out faster. Accounts with a chargeback may lose the paid upgrade while the dispute is open.
+        Please email us before disputing a charge with your bank. We will sort it out faster. Accounts with a chargeback may lose the paid upgrade while the dispute is open.
       </p>
 
       <p>
