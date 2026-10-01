@@ -11,6 +11,7 @@ import { LegalFooter } from "@/components/legal/LegalPage";
 import { Founder } from "@/components/legal/Founder";
 import { SITE } from "@/lib/site";
 import { track } from "@/lib/analytics";
+import { QuickJoin } from "./QuickJoin";
 
 const SHOW_COUNT_FROM = 25;
 
@@ -28,6 +29,7 @@ export function Landing() {
   const today = useMemo(() => residents.filter((r) => now - r.joinedAt < 864e5).length, [residents, now]);
   // An almost-empty count reads as "nobody's here"; show it once the city has some life.
   const showCount = residents.length >= SHOW_COUNT_FROM;
+  const spotsLeft = Math.max(0, SITE.offer.spots - residents.length);
   const count = `${residents.length.toLocaleString("en-IN")} ${residents.length === 1 ? "plot" : "plots"} registered`;
 
   const enter = () => {
@@ -70,7 +72,13 @@ export function Landing() {
             </span>
           )}
           <h1 className="rise font-display text-[2.6rem] font-black leading-[0.95] tracking-tight sm:text-7xl" style={{ animationDelay: "0.1s" }}>
-            {me ? (
+            {me?.handle.startsWith("resident-") ? (
+              <>
+                You&apos;re on
+                <br />
+                <span className="bg-gradient-to-r from-blue via-[#9fdcff] to-cyan bg-clip-text text-transparent">the waitlist.</span>
+              </>
+            ) : me ? (
               <>
                 Welcome home,
                 <br />
@@ -92,22 +100,40 @@ export function Landing() {
               ? `${plotLabel(PLOTS_BY_ID.get(me.plotId)!)} · #${me.place} on the waitlist · ${me.floors} floor${me.floors > 1 ? "s" : ""}.`
               : "Join the waitlist and a plot in MergeCity is registered in your name. Invite teammates to stack floors on your house."}
           </p>
-          <div className="rise mt-6 flex flex-wrap items-center gap-3" style={{ animationDelay: "0.26s" }}>
-            {me ? (
-              <button className="btn btn-primary text-sm" onClick={enter}>
-                Enter the city <span aria-hidden>→</span>
-              </button>
-            ) : (
-              <>
-                <button className="btn btn-primary text-sm sm:px-8" onClick={() => { track("join_start"); set({ phase: "join" }); }}>
-                  Move in <span aria-hidden>→</span>
+          {me ? (
+            <>
+              {me.place <= SITE.offer.spots && (
+                <p className="rise mt-5 max-w-[460px] rounded-xl border border-amber/30 bg-amber/10 px-3 py-2 text-sm text-amber" style={{ animationDelay: "0.22s" }}>
+                  🎁 You&apos;re #{me.place}, one of the first {SITE.offer.spots}: {SITE.offer.months} months of MergeMate free at launch.
+                </p>
+              )}
+              <div className="rise mt-5 flex flex-wrap items-center gap-3" style={{ animationDelay: "0.26s" }}>
+                <button className="btn btn-primary text-sm" onClick={enter}>
+                  Enter the city <span aria-hidden>→</span>
                 </button>
-                <button className="btn btn-ghost" onClick={enter}>
+                <button className="btn btn-ghost" onClick={() => { track("join_start", { flow: "character" }); set({ phase: "join", draftLook: me.look }); }}>
+                  {me.handle.startsWith("resident-") ? "Build your character" : "Edit my character"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="rise mt-5" style={{ animationDelay: "0.26s" }}>
+              {spotsLeft > 0 && (
+                <p className="mb-3 text-sm text-amber">
+                  🎁 First {SITE.offer.spots} people get {SITE.offer.months} months of MergeMate free · <b>{spotsLeft} spots left</b>
+                </p>
+              )}
+              <QuickJoin />
+              <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+                <button className="text-cyan hover:underline" onClick={() => { track("join_start", { flow: "full" }); set({ phase: "join" }); }}>
+                  Want a house too? Build your character →
+                </button>
+                <button className="text-muted hover:text-ink" onClick={enter}>
                   Look around first
                 </button>
-              </>
-            )}
-          </div>
+              </div>
+            </div>
+          )}
           {showCount && (
             <div className="rise mt-5 flex items-center gap-2 font-mono text-xs text-dim sm:hidden" style={{ animationDelay: "0.3s" }}>
               <span className="live-dot" /> {count} · {today} today

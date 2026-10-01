@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { rest, supabaseConfigured, userEmails, userFromToken } from "@/lib/server/supabase";
+import { authUsers, rest, supabaseConfigured, userFromToken } from "@/lib/server/supabase";
 import { cleanHandle, isBlockedName } from "@/lib/moderation";
 import { SITE } from "@/lib/site";
 
@@ -30,13 +30,15 @@ export async function GET(req: NextRequest) {
   const denied = await guard(req);
   if (denied) return denied;
   try {
-    const [residents, referrals, payments, teams, emails] = await Promise.all([
+    const [residents, referrals, payments, teams, users] = await Promise.all([
       rest<Res[]>("residents?select=*&order=place.asc&limit=10000"),
       rest<Ref[]>("referrals?select=*"),
       rest<Pay[]>("payments?select=user_id,amount,currency,gateway_id,created_at&order=created_at.desc"),
       rest<TeamRow[]>("teams?select=id,name,tower_id,seats,owner_id"),
-      userEmails(),
+      authUsers(),
     ]);
+    const emails = new Map(users.map((u) => [u.id, u.email]));
+    const moved = new Set(residents.map((r) => r.user_id));
     const refCount = new Map<string, number>();
     referrals.forEach((r) => refCount.set(r.referrer_id, (refCount.get(r.referrer_id) ?? 0) + 1));
     return NextResponse.json({
@@ -57,6 +59,18 @@ export async function GET(req: NextRequest) {
       referrals: referrals.map((r) => ({ referrerId: r.referrer_id, referredId: r.referred_id, verifiedAt: Date.parse(r.verified_at) })),
       payments: payments.map((p) => ({ userId: p.user_id, amount: Number(p.amount), currency: p.currency, gatewayId: p.gateway_id, at: Date.parse(p.created_at) })),
       teams: teams.map((t) => ({ id: t.id, name: t.name, towerId: t.tower_id, seats: t.seats, ownerId: t.owner_id })),
+      // Where people stop: asked for a code -> entered it -> moved in -> paid.
+      funnel: {
+        codeRequested: users.length,
+        verified: users.filter((u) => u.verified).length,
+        movedIn: residents.length,
+        paid: new Set(payments.map((p) => p.user_id)).size,
+        stuck: users
+          .filter((u) => !moved.has(u.id))
+          .sort((a, b) => b.createdAt - a.createdAt)
+          .slice(0, 50)
+          .map((u) => ({ email: u.email, verified: u.verified, at: u.createdAt })),
+      },
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

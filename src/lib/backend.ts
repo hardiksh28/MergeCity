@@ -11,7 +11,7 @@
 import { CITY, MAX_FLOORS, PLOTS_BY_ID, type PlotDistrict } from "./city";
 import { hashString, mulberry32, pick } from "./rng";
 import type { Headwear, JoinInput, Look, Me, PublicResident, Team, Tier } from "./types";
-import { cleanHandle, isValidEmail, normalizeGithub, validateJoin } from "./moderation";
+import { cleanHandle, defaultHandle, isValidEmail, normalizeGithub, validateJoin } from "./moderation";
 import { LIVE, live } from "./live";
 
 export const OUTFITS = ["#4fd1ff", "#5b7cff", "#7ee787", "#ffc15e", "#ff8a4c", "#e5484d", "#eceff4", "#2e3440"];
@@ -41,6 +41,14 @@ export interface AdminData {
   referrals: { referrerId: string; referredId: string; verifiedAt: number }[];
   payments: { userId: string; amount: number; currency: string; gatewayId: string; at: number }[];
   teams: Team[];
+  /** Live only: where signups drop off. */
+  funnel?: {
+    codeRequested: number;
+    verified: number;
+    movedIn: number;
+    paid: number;
+    stuck: { email: string; verified: boolean; at: number }[];
+  };
 }
 
 /** What the UI needs from a backend. `demo` (below) and `live` (live.ts) both implement it. */
@@ -53,6 +61,8 @@ export interface Backend {
   requestCode(email: string): Promise<{ devCode: string }>;
   validate(input: JoinInput): string | null;
   verifyAndJoin(input: JoinInput, code: string): Promise<Me>;
+  /** Change your own door name, GitHub and character. */
+  updateHouse(input: { handle: string; github: string; look: Look }): Promise<Me>;
   signOut(): void;
   simulateTeammate(): Promise<{ me: Me; mate: PublicResident } | null>;
   /** Live: returns the Dodo checkout URL to send the buyer to. Demo: upgrades straight away. */
@@ -284,7 +294,7 @@ const demo: Backend = {
     if (!plot) throw new Error("The city is full. We're zoning a new district.");
     const id = makeId();
     const github = normalizeGithub(input.github) || null;
-    const handle = cleanHandle(input.handle) || github || e.split("@")[0].slice(0, 14);
+    const handle = cleanHandle(input.handle) || github || defaultHandle();
     const referrer = input.ref ? db.residents.find((r) => r.refCode === input.ref) : undefined;
     const row: Row = {
       id,
@@ -312,6 +322,18 @@ const demo: Backend = {
     db.lastSeen = { at: now(), residents: db.residents.length, floors: 1, tier: "free" };
     save();
     return toMe(db, row);
+  },
+
+  async updateHouse(input) {
+    await wait(400);
+    const db = load();
+    const me = db.residents.find((r) => r.id === db.meId);
+    if (!me) throw new Error("Sign in first.");
+    me.handle = cleanHandle(input.handle) || me.handle;
+    me.github = normalizeGithub(input.github) || null;
+    me.look = input.look;
+    save();
+    return toMe(db, me);
   },
 
   signOut() {

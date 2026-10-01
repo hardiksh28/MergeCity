@@ -350,8 +350,12 @@ function HousePanel() {
         )}
       </section>
 
+      <button className="btn btn-ghost mt-6 w-full" onClick={() => set({ panel: null, phase: "join", draftLook: me.look })}>
+        Edit my character
+      </button>
+
       <button
-        className="mt-6 w-full text-center text-xs text-dim hover:text-muted"
+        className="mt-4 w-full text-center text-xs text-dim hover:text-muted"
         onClick={() => {
           backend.signOut();
           set({ me: null, panel: null, phase: "landing", guest: false });

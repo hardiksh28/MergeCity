@@ -46,17 +46,29 @@ export async function rest<T = unknown>(path: string, init: RequestInit = {}): P
   return (text ? JSON.parse(text) : null) as T;
 }
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  verified: boolean;
+  createdAt: number;
+}
+
 /** id -> email for every account (Auth admin API). */
 export async function userEmails(): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
+  return new Map((await authUsers()).map((u) => [u.id, u.email]));
+}
+
+/** Every auth account. One is created when someone first requests a code. */
+export async function authUsers(): Promise<AuthUser[]> {
+  const out: AuthUser[] = [];
   for (let page = 1; page <= 20; page++) {
     const res = await fetch(`${URL_}/auth/v1/admin/users?page=${page}&per_page=1000`, {
       headers: { apikey: KEY!, Authorization: `Bearer ${KEY}` },
       cache: "no-store",
     });
     if (!res.ok) throw new Error(`auth users failed: ${res.status}`);
-    const { users } = (await res.json()) as { users: { id: string; email?: string }[] };
-    users.forEach((u) => out.set(u.id, u.email ?? ""));
+    const { users } = (await res.json()) as { users: { id: string; email?: string; email_confirmed_at?: string | null; created_at: string }[] };
+    users.forEach((u) => out.push({ id: u.id, email: u.email ?? "", verified: !!u.email_confirmed_at, createdAt: Date.parse(u.created_at) }));
     if (users.length < 1000) break;
   }
   return out;

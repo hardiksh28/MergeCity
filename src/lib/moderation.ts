@@ -43,3 +43,14 @@ export function validateJoin(input: { email: string; github: string; handle: str
   if (h && isBlockedName(h)) return "Pick a different name for your door.";
   return null;
 }
+
+/** Door name for people who skip it. Never derived from the email, which would leak it publicly. */
+export function defaultHandle() {
+  return `resident-${Math.floor(1000 + Math.random() * 9000)}`;
+}
+
+/** A random character, for one-click joins. */
+export function randomLook<T extends string, H extends string>(outfits: T[], skins: T[], heads: { id: H }[]) {
+  const pick = <X,>(a: X[]) => a[Math.floor(Math.random() * a.length)];
+  return { outfit: pick(outfits), skin: pick(skins), head: pick(heads).id };
+}

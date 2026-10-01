@@ -14,10 +14,12 @@ export function JoinFlow() {
   const ref = useCity((s) => s.ref);
   const map2d = useCity((s) => s.map2d);
   const set = useCity((s) => s.set);
+  // Signed in already (e.g. joined with just an email): this screen edits your house instead.
+  const me = useCity((s) => s.me);
 
   const [email, setEmail] = useState("");
-  const [github, setGithub] = useState("");
-  const [handle, setHandle] = useState("");
+  const [github, setGithub] = useState(() => me?.github ?? "");
+  const [handle, setHandle] = useState(() => (me && !me.handle.startsWith("resident-") ? me.handle : ""));
   const [code, setCode] = useState("");
   const [devCode, setDevCode] = useState("");
   const [error, setError] = useState("");
@@ -39,11 +41,29 @@ export function JoinFlow() {
     try {
       const r = await backend.requestCode(email);
       setDevCode(r.devCode);
-      track("code_requested");
+      track("code_requested", { flow: "full" });
       set({ phase: "verify" });
     } catch (x) {
       setError((x as Error).message);
     } finally {
+      setBusy(false);
+    }
+  };
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!me) return;
+    setError("");
+    const err = backend.validate({ ...input, email: me.email });
+    if (err) return setError(err);
+    setBusy(true);
+    try {
+      const updated = await backend.updateHouse({ handle, github, look });
+      const { residents, teams } = backend.city();
+      set({ me: updated, residents, teams, phase: "movein" });
+      track("character_built");
+    } catch (x) {
+      setError((x as Error).message);
       setBusy(false);
     }
   };
@@ -56,12 +76,13 @@ export function JoinFlow() {
       const me = await backend.verifyAndJoin(input, override ?? code);
       const { residents, teams } = backend.city();
       set({ me, residents, teams, phase: "movein", guest: false, welcome: null });
-      track("sign_up", { method: "email", referred: ref ? 1 : 0 });
+      track("sign_up", { method: "email", flow: "full", referred: ref ? 1 : 0 });
       useCity.getState().arrive(me.plotId);
       try {
         sessionStorage.removeItem("mergecity:ref");
       } catch {}
     } catch (x) {
+      track("verify_failed", { flow: "full" });
       setError((x as Error).message);
       setBusy(false);
     }
@@ -85,20 +106,22 @@ export function JoinFlow() {
       <div className="glass sheet-in pointer-events-auto flex max-h-[68dvh] w-full flex-col rounded-t-3xl sm:max-h-[calc(100dvh-3rem)] sm:w-[440px] sm:rounded-3xl">
         <div className="no-scrollbar overflow-y-auto p-5 sm:p-7">
           {phase === "join" ? (
-            <form onSubmit={send} noValidate>
+            <form onSubmit={me ? save : send} noValidate>
               <div className="flex items-center justify-between gap-3">
-                <p className="label !text-cyan">Step 1 of 2 · Your residency</p>
+                <p className="label !text-cyan">{me ? "Your house" : "Step 1 of 2 · Your residency"}</p>
                 <BackButton className="hidden sm:inline-flex" />
               </div>
-              <h2 className="mt-2 font-display text-2xl font-black tracking-tight">Build your resident</h2>
-              {ref && <p className="mt-2 rounded-lg border border-lime/30 bg-lime/10 px-3 py-2 text-xs text-lime">A teammate invited you. They gain a floor once you verify.</p>}
+              <h2 className="mt-2 font-display text-2xl font-black tracking-tight">{me ? "Build your character" : "Build your resident"}</h2>
+              {ref && !me && <p className="mt-2 rounded-lg border border-lime/30 bg-lime/10 px-3 py-2 text-xs text-lime">A teammate invited you. They gain a floor once you verify.</p>}
 
               <div className="mt-5 space-y-4">
+                {!me && (
                 <label className="block">
                   <span className="label">Email · required</span>
                   <input className="field mt-1.5" type="email" inputMode="email" autoComplete="email" placeholder="you@company.dev" value={email} onChange={(e) => setEmail(e.target.value)} required />
                   <span className="mt-1 block text-[11px] text-dim">Never shown in the city. We send one code to verify.</span>
                 </label>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <label className="block">
                     <span className="label">GitHub</span>
@@ -155,13 +178,13 @@ export function JoinFlow() {
 
               {error && <p role="alert" className="mt-4 text-sm text-red">{error}</p>}
               <button className="btn btn-primary mt-5 w-full" disabled={busy}>
-                {busy ? "Sending code…" : "Send my door key →"}
+                {me ? (busy ? "Saving…" : "Save my house →") : busy ? "Sending code…" : "Send my door key →"}
               </button>
-              <p className="mt-3 text-center text-[11px] leading-relaxed text-dim">
+              {!me && <p className="mt-3 text-center text-[11px] leading-relaxed text-dim">
                 Free. No card. One email to verify, then launch news only. By joining you agree to the{" "}
                 <Link href="/terms" target="_blank" className="underline hover:text-ink">Terms</Link> and{" "}
                 <Link href="/privacy" target="_blank" className="underline hover:text-ink">Privacy Policy</Link>.
-              </p>
+              </p>}
             </form>
           ) : (
             <form onSubmit={verify}>

@@ -106,6 +106,8 @@ export default function Admin() {
           ))}
         </section>
 
+        {data.funnel && <Funnel f={data.funnel} />}
+
         <section className="glass mt-6 rounded-2xl p-4">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-display text-lg font-bold">Recent payments</h2>
@@ -198,4 +200,45 @@ function fmtMoney(n: number, currency: string) {
   } catch {
     return `${n} ${currency}`;
   }
+}
+
+function Funnel({ f }: { f: NonNullable<AdminData["funnel"]> }) {
+  const steps = [
+    { k: "Asked for a code", n: f.codeRequested, hint: "Entered an email" },
+    { k: "Verified", n: f.verified, hint: "Typed the 6-digit code" },
+    { k: "Moved in", n: f.movedIn, hint: "Got a plot (on the waitlist)" },
+    { k: "Paid", n: f.paid, hint: "Founding resident" },
+  ];
+  const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : "–");
+  return (
+    <section className="glass mt-6 rounded-2xl p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-display text-lg font-bold">Signup funnel</h2>
+        <span className="text-xs text-dim">From your database. People who quit before typing an email only show in Google Analytics (join_start).</span>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {steps.map((s, i) => (
+          <div key={s.k} className="rounded-xl border border-line bg-white/[0.02] p-3">
+            <div className="label !text-[10px]">{s.k}</div>
+            <div className="mt-1 font-display text-2xl font-black">{s.n}</div>
+            <div className="text-[11px] text-dim">{i === 0 ? s.hint : `${pct(s.n, steps[i - 1].n)} of previous · ${s.hint}`}</div>
+          </div>
+        ))}
+      </div>
+      {f.stuck.length > 0 && (
+        <details className="mt-3 text-sm">
+          <summary className="cursor-pointer text-muted hover:text-ink">{f.stuck.length} people started but never moved in</summary>
+          <ul className="mt-2 divide-y divide-line/60 rounded-xl border border-line">
+            {f.stuck.map((u) => (
+              <li key={u.email + u.at} className="flex flex-wrap items-center gap-3 px-3 py-2">
+                <span className="font-mono text-xs">{u.email}</span>
+                <span className={`chip !py-0 !text-[10px] ${u.verified ? "!text-amber" : "!text-red"}`}>{u.verified ? "verified, no house" : "never entered code"}</span>
+                <span className="ml-auto text-xs text-dim">{new Date(u.at).toLocaleString("en-IN")}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
+  );
 }

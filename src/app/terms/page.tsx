@@ -31,7 +31,12 @@ export default function Terms() {
         Each verified teammate who joins with your invite link adds a floor to your house, up to 5 floors. Referrals from fake, duplicate or automated accounts do not count and may be removed.
       </p>
 
-      <h2>4. Paid upgrades</h2>
+      <h2>4. Launch offer</h2>
+      <p>
+        The first {SITE.offer.spots} people to verify their email and join the waitlist (waitlist spots #1 to #{SITE.offer.spots}, as shown on your ticket) get {SITE.offer.months} months of {SITE.brand} free from launch. The free period starts when {SITE.brand} launches, applies to one account per person, and needs no card. Duplicate or automated accounts don&apos;t qualify and may be removed.
+      </p>
+
+      <h2>5. Paid upgrades</h2>
       <ul>
         <li>
           <strong>Founding resident, {SITE.founderPrice} USD, one-time.</strong> Moves your house to Main Street with its lights on and a flag. It is credited as {SITE.founderPrice} off your first {SITE.brand} bill and is refundable on request before launch.
@@ -47,7 +52,7 @@ export default function Terms() {
         </li>
       </ul>
 
-      <h2>5. Fair use</h2>
+      <h2>6. Fair use</h2>
       <p>Don&apos;t:</p>
       <ul>
         <li>use names that are offensive, impersonate someone, or break the law</li>
@@ -56,22 +61,22 @@ export default function Terms() {
       </ul>
       <p>We may rename or remove houses, and suspend accounts, that break these rules. Where a paid upgrade is removed for a reason that isn&apos;t your fault, we refund it.</p>
 
-      <h2>6. Your content</h2>
+      <h2>7. Your content</h2>
       <p>
         You keep ownership of what you add, such as the name on your door. You let us display it in {SITE.product} and its screenshots for as long as your account exists.
       </p>
 
-      <h2>7. Availability and liability</h2>
+      <h2>8. Availability and liability</h2>
       <p>
         {SITE.product} is provided &quot;as is&quot;. We try hard to keep it running but cannot promise it will always be available or error-free. To the extent the law allows, our total liability to you is limited to the amount you paid us in the 12 months before the claim.
       </p>
 
-      <h2>8. Ending</h2>
+      <h2>9. Ending</h2>
       <p>
         You can delete your account at any time by emailing <a href={`mailto:${SITE.email}`}>{SITE.email}</a>. We may shut down the waitlist after {SITE.brand} launches. Unused founding-resident payments are then refunded or credited as described in the refund policy.
       </p>
 
-      <h2>9. Changes and law</h2>
+      <h2>10. Changes and law</h2>
       <p>
         We may update these terms and will email you about important changes. These terms are governed by the laws of India. Disputes go to the courts of India, unless the law where you live gives you the right to bring a claim there.
       </p>

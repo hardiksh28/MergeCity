@@ -18,7 +18,9 @@ export const SITE = {
     website: "https://hardiksharma.in",
     github: "https://github.com/hardiksh28",
   },
-  updated: "30 September 2026",
+  // Launch offer for the earliest signups. Shown on the home screen and in the Terms.
+  offer: { spots: 100, months: 3 },
+  updated: "1 October 2026",
   founderPrice: `$${FOUNDER_PRICE}`,
   seatPrice: `$${SEAT_PRICE}`,
   refundDays: 7,

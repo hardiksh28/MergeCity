@@ -8,7 +8,7 @@
  */
 
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
-import { cleanHandle, isValidEmail, normalizeGithub, validateJoin } from "./moderation";
+import { cleanHandle, defaultHandle, isValidEmail, normalizeGithub, validateJoin } from "./moderation";
 import type { AdminData, Backend } from "./backend";
 import type { JoinInput, Look, Me, PublicResident, Team, Tier } from "./types";
 
@@ -191,11 +191,26 @@ export const live: Backend = {
     const { data, error } = await sb().auth.verifyOtp({ email: e, token: code.trim(), type: "email" });
     if (error || !data.session) throw new Error("Wrong or expired code.");
     const github = normalizeGithub(input.github);
-    const handle = cleanHandle(input.handle) || github || e.split("@")[0].slice(0, 14);
+    const handle = cleanHandle(input.handle) || github || defaultHandle();
     const { error: moveErr } = await sb().rpc("move_in", { p_handle: handle, p_github: github, p_look: input.look, p_ref: input.ref ?? "" });
     if (moveErr) throw new Error(friendly(moveErr.message));
     await refresh();
     if (!me) throw new Error("You're verified, but we couldn't load your house. Refresh the page.");
+    return me;
+  },
+
+  async updateHouse(input) {
+    const { error } = await sb().rpc("update_my_house", {
+      p_handle: cleanHandle(input.handle),
+      p_github: normalizeGithub(input.github),
+      p_look: input.look,
+    });
+    if (error) {
+      if (/function|schema cache/i.test(error.message)) throw new Error("Editing your house isn't switched on yet. Try again later.");
+      throw new Error(error.message);
+    }
+    await refresh();
+    if (!me) throw new Error("Couldn't load your house. Refresh the page.");
     return me;
   },
 

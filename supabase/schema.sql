@@ -158,6 +158,22 @@ begin
   return out_row;
 end $$;
 
+-- ------------------------------------------------------- edit my house
+-- Residents can change their own door name, GitHub and character. Nothing else.
+create or replace function public.update_my_house(p_handle text, p_github text, p_look jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'Sign in first.'; end if;
+  if p_github is not null and p_github <> '' and p_github !~* '^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){0,38}$' then
+    raise exception 'That GitHub username isn''t valid.';
+  end if;
+  update residents set
+    handle = coalesce(nullif(trim(p_handle), ''), handle),
+    github = nullif(trim(p_github), ''),
+    look   = coalesce(p_look, look)
+  where user_id = auth.uid();
+end $$;
+
 -- ------------------------------------------------------ payment grants
 -- Only callable with the service-role key (from the webhook route).
 create or replace function public.grant_founder(p_user_id uuid, p_gateway_id text, p_amount numeric, p_currency text default 'USD')
@@ -247,6 +263,8 @@ revoke all on function public.grant_founder, public.grant_tower, public.release_
 grant execute on function public.grant_founder, public.grant_tower, public.release_tower to service_role;
 revoke all on function public.move_in from public, anon;
 grant execute on function public.move_in to authenticated;
+revoke all on function public.update_my_house from public, anon;
+grant execute on function public.update_my_house to authenticated;
 
 -- ------------------------------------------------------------ realtime
 -- New houses appear live for everyone.
