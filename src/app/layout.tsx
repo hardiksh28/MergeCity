@@ -7,6 +7,7 @@ const grotesk = Space_Grotesk({ variable: "--font-grotesk", subsets: ["latin"] }
 const mono = JetBrains_Mono({ variable: "--font-jbmono", subsets: ["latin"] });
 
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { GA_ID } from "@/lib/ga";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -26,7 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${orbitron.variable} ${grotesk.variable} ${mono.variable} h-full antialiased`}>
       <body className="h-full overflow-hidden">{children}</body>
-      {process.env.NEXT_PUBLIC_GA_ID && <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />}
+      {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
     </html>
   );
 }
