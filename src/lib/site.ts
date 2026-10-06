@@ -7,6 +7,8 @@ export const SITE = {
   // What MergeMate does, in one line. Shown under the headline and in link previews.
   pitch: "MergeMate finds open source issues that match your skills and walks you through the fix, so you ship real PRs and actually understand them.",
   url: "https://merge-city.vercel.app",
+  // The MergeMate app itself. Every "Open MergeMate" link points here.
+  appUrl: process.env.NEXT_PUBLIC_MERGEMATE_URL || "https://mergemate-teal.vercel.app",
   operator: "Hardik Sharma",
   location: "India",
   // Answers support, refund and privacy requests.

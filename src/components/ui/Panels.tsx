@@ -170,7 +170,7 @@ function NeighbourPanel({ id }: { id: string }) {
         </div>
       )}
       {launch && (
-        <a className="btn btn-gold mt-6 w-full" href="#" onClick={(e) => e.preventDefault()}>
+        <a className="btn btn-gold mt-6 w-full" href={SITE.appUrl} target="_blank" rel="noreferrer" onClick={() => track("open_mergemate", { from: "door" })}>
           Open MergeMate →
         </a>
       )}

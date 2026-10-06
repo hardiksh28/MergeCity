@@ -99,6 +99,9 @@ export function Hud() {
             <button className="w-full rounded-lg px-3 py-2 text-left hover:bg-white/5" onClick={() => set({ launch: !launch })}>
               Preview launch day: <b>{launch ? "On" : "Off"}</b>
             </button>
+            <a className="block w-full rounded-lg px-3 py-2 text-left text-cyan hover:bg-white/5" href={SITE.appUrl} target="_blank" rel="noreferrer">
+              Open MergeMate ↗
+            </a>
             {(backend.demo || me?.email === SITE.email) && (
               <a className="block w-full rounded-lg px-3 py-2 text-left text-muted hover:bg-white/5" href="/admin">
                 Admin{backend.demo ? " (demo)" : ""}

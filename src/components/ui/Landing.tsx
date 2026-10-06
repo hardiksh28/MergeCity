@@ -114,6 +114,9 @@ export function Landing() {
                 <button className="btn btn-ghost" onClick={() => { track("join_start", { flow: "character" }); set({ phase: "join", draftLook: me.look }); }}>
                   {me.handle.startsWith("resident-") ? "Build your character" : "Edit my character"}
                 </button>
+                <a className="text-sm text-cyan hover:underline" href={SITE.appUrl} target="_blank" rel="noreferrer" onClick={() => track("open_mergemate", { from: "landing_resident" })}>
+                  Open MergeMate (beta) ↗
+                </a>
               </div>
             </>
           ) : (
@@ -131,6 +134,9 @@ export function Landing() {
                 <button className="text-muted hover:text-ink" onClick={enter}>
                   Look around first
                 </button>
+                <a className="text-muted hover:text-ink" href={SITE.appUrl} target="_blank" rel="noreferrer" onClick={() => track("open_mergemate", { from: "landing_guest" })}>
+                  Try MergeMate (beta) ↗
+                </a>
               </div>
             </div>
           )}
